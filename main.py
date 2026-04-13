@@ -1,10 +1,14 @@
+import os
 import json
 import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
 from google import genai
+from dotenv import load_dotenv
 
-GOOGLE_API_KEY = "AIzaSyAFf58zmT2ZES47zQGS7q4pqeLUqQcV7H0"
+# 🚨 보안 처리: .env 파일에서 키를 몰래 불러오기 (절대 여기에 직접 적지 마세요!)
+load_dotenv()
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # 구글 최신 공식 SDK 클라이언트 연결
 client = genai.Client(api_key=GOOGLE_API_KEY)
