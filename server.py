@@ -57,5 +57,3 @@ def parse_prescription(request: OcrRequest):
     except Exception as e:
         print(f"[에러 발생] {e}")
         return {"status": "error", "message": str(e)}
-
-#pip install fastapi uvicorn pydantic google-genai python-dotenv
