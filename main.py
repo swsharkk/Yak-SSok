@@ -20,7 +20,7 @@ class OcrRequest(BaseModel):
 
 @app.post("/api/parse-prescription")
 def parse_prescription(request: OcrRequest):
-    print("📥 [데이터 수신] 텍스트가 도착했습니다. 최신 Gemini가 분석을 시작합니다...")
+    print("[데이터 수신] 텍스트가 도착했습니다. 최신 Gemini가 분석을 시작합니다.")
     
     prompt = f"""
     너는 정확한 의료 데이터 분석 AI야. 
@@ -51,9 +51,11 @@ def parse_prescription(request: OcrRequest):
         clean_json = result_text.replace("```json", "").replace("```", "").strip()
         parsed_data = json.loads(clean_json)
         
-        print("✅ [AI 분석 완료] 완벽한 JSON 데이터 반환!")
+        print("[AI 분석 완료] JSON 데이터 반환")
         return {"status": "success", "data": parsed_data}
 
     except Exception as e:
-        print(f"❌ [에러 발생] {e}")
+        print(f"[에러 발생] {e}")
         return {"status": "error", "message": str(e)}
+
+#pip install fastapi uvicorn pydantic google-genai python-dotenv
