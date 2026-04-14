@@ -31,7 +31,7 @@ pip install fastapi uvicorn pydantic google-genai python-dotenv
 다음 명령어를 입력하여 서버를 실행합니다. `--reload` 옵션이 적용되어 있어 코드 수정 시 서버가 자동으로 재시작됩니다.
 
 ```bash
-python -m uvicorn main:app --reload
+python -m uvicorn server:app --reload
 ```
 
 ## API Endpoints
