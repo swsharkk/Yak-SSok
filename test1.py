@@ -1,6 +1,10 @@
+import os
 from google import genai
+from dotenv import load_dotenv
 
-GOOGLE_API_KEY = "AIzaSyAFf58zmT2ZES47zQGS7q4pqeLUqQcV7H0"
+# 보안 처리: .env 파일에서 키를 몰래 불러옴
+load_dotenv()
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 client = genai.Client(api_key=GOOGLE_API_KEY)
 
