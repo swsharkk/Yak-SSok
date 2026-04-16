@@ -1,0 +1,13 @@
+# Firebase Key 
+yakssok-backend-firebase-adminsdk-fbsvc-15c58432ef.json
+*.json
+
+# Python 환경 및 캐시 (공유 불필요)
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# 운영체제 설정 파일 (공유 불필요)
+.DS_Store
+Thumbs.db
