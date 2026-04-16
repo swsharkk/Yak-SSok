@@ -2,8 +2,6 @@ import firebase_admin
 from firebase_admin import credentials
 from fastapi import FastAPI
 
-# 1. Firebase 초기화 (가장 먼저 실행되어야 합니다)
-# 파일명이 dir 명령어로 확인한 이름과 정확히 일치하도록 설정했습니다.
 try:
     cred = credentials.Certificate("yakssok-backend-firebase-adminsdk-fbsvc-15c58432ef.json")
     firebase_admin.initialize_app(cred)
