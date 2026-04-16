@@ -15,7 +15,7 @@ def create_user(email, role, nickname, password):
             "email": email,
             "role": role,
             "nickname": nickname,
-            "password": hash_password(password),  # 비밀번호를 암호화해서 저장
+            "password": hash_password(password),  # 비밀번호 암호화
             "connected_with": None,
             "status": "unlinked"
         }
@@ -32,7 +32,7 @@ def create_user(email, role, nickname, password):
         return {"error": str(e)}
 
     
-    #  비밀번호를 안전한 암호문으로 바꾸는 함수
+    #  비밀번호 암호문으로 바꾸는 함수
 def hash_password(password: str):
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -55,7 +55,7 @@ def request_connection(guardian_uid, target_code):
     elder_query = db.collection("users").where("link_code", "==", target_code).stream()
     for doc in elder_query:
         elder_uid = doc.id
-        # 연결 대기 상태로 저장 (실시간 연동의 시작)
+        # 연결 대기 상태로 저장 
         db.collection("connections").add({
             "elder_uid": elder_uid,
             "guardian_uid": guardian_uid,
@@ -76,7 +76,6 @@ def update_elder_memo(elder_uid, memo_text):
     except Exception as e:
         return {"status": "error", "message": str(e)}
     
-    # authorization.py
 
 def approve_connection(elder_uid, connection_id):
     try:
@@ -96,7 +95,6 @@ def approve_connection(elder_uid, connection_id):
     except Exception as e:
         return {"status": "error", "message": str(e)}
     
-    # authorization.py 하단에 추가
 
 def take_medication(elder_uid, schedule_id):
     try:
