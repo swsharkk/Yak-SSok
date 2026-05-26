@@ -1,0 +1,89 @@
+name: yakssok_front
+description: yak-ssok 프론트엔드
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # 상태관리
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # 라우팅
+  go_router: ^14.2.0
+
+  # 데이터 모델 (freezed)
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.9.0
+
+  # 네트워크
+  dio: ^5.4.3+1
+
+  # 로컬 저장
+  shared_preferences: ^2.2.3
+
+  # 백엔드
+  firebase_core: ^3.8.0
+  firebase_auth: ^5.3.3
+  cloud_firestore: ^5.5.0
+  uuid: ^4.4.0
+
+  # UI 기능
+  table_calendar: ^3.1.2
+  google_maps_flutter: ^2.6.0
+  flutter_local_notifications: ^17.2.2
+  flutter_timezone: ^1.0.4
+  timezone: ^0.9.0
+
+  # 지도 / 위치
+  flutter_naver_map: ^1.3.0
+  geolocator: ^13.0.0
+  sensors_plus: ^6.0.0
+  url_launcher: ^6.3.0
+
+  # 카메라 / 음성
+  camera: ^0.10.5+9
+  speech_to_text: ^6.6.2
+
+  # 건강 데이터 (Apple Health / Google Health Connect)
+  health: ^12.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+  # 코드 생성
+  build_runner: ^2.4.11
+  freezed: ^2.5.2
+  json_serializable: ^6.8.0
+  riverpod_generator: ^2.4.0
+  custom_lint: ^0.6.4
+  riverpod_lint: ^2.3.10
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+    - assets/kakao_login_btn.png
+    - assets/naver_login_btn.png
+
+  fonts:
+    - family: MaruBuri
+      fonts:
+        - asset: assets/OTF/MaruBuri-ExtraLight.otf
+          weight: 200
+        - asset: assets/OTF/MaruBuri-Light.otf
+          weight: 300
+        - asset: assets/OTF/MaruBuri-Regular.otf
+          weight: 400
+        - asset: assets/OTF/MaruBuri-SemiBold.otf
+          weight: 600
+        - asset: assets/OTF/MaruBuri-Bold.otf
+          weight: 700

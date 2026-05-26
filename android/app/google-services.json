@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "952722812083",
+    "project_id": "yakssok-8ac20",
+    "storage_bucket": "yakssok-8ac20.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:952722812083:android:e07a861570d5784a6794c6",
+        "android_client_info": {
+          "package_name": "com.example.yakssok_front"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDp9hICA2nYJ18kDJI1GIMk83UqqfGBMC8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
