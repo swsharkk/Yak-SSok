@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/responsive.dart';
 import '../../core/theme.dart';
 import '../../models/medicine.dart';
 import '../../providers/medicine_provider.dart';
@@ -19,11 +20,11 @@ class SearchScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          SliverAppBar(
+          const SliverAppBar(
             automaticallyImplyLeading: false,
             backgroundColor: AppColors.background,
             elevation: 0,
@@ -36,13 +37,8 @@ class SearchScreen extends StatelessWidget {
             toolbarHeight: 64,
           ),
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              AppDimensions.paddingXxl,
-              AppDimensions.paddingXxl,
-              AppDimensions.paddingXxl,
-              AppDimensions.paddingXxl,
-            ),
-            sliver: SliverToBoxAdapter(
+            padding: AppResponsive.pagePadding(context),
+            sliver: const SliverToBoxAdapter(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -284,11 +280,11 @@ class _SearchHeader extends StatelessWidget {
     return Row(
       children: [
         Transform.translate(
-          offset: const Offset(-18, 0),
+          offset: Offset(AppResponsive.headerLogoOffset(context), 0),
           child: Image.asset(
             _logoPath,
-            width: 220,
-            height: 44,
+            width: AppResponsive.logoWidth(context),
+            height: AppResponsive.logoHeight(context),
             fit: BoxFit.cover,
             alignment: Alignment.center,
             semanticLabel: AppStrings.appName,
@@ -336,68 +332,95 @@ class _SearchMethodGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gridHeight =
-        (MediaQuery.sizeOf(context).height * 0.47).clamp(380.0, 520.0);
+    final isCompact = AppResponsive.isCompact(context);
+    final gridHeight = isCompact
+        ? 560.0
+        : (MediaQuery.sizeOf(context).height * 0.47).clamp(380.0, 520.0);
 
     return SizedBox(
       height: gridHeight,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            flex: 4,
-            child: _SearchMethodCard(
-              backgroundColor: AppColors.searchVoiceBg,
-              iconBackgroundColor: AppColors.searchVoiceIconBg,
-              foregroundColor: AppColors.searchVoicePrimary,
-              icon: Icons.mic_rounded,
-              title: AppStrings.voiceSearch,
-              description: AppStrings.voiceSearchDescription,
-              isPrimary: true,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const VoiceSearchScreen()),
-              ),
-            ),
-          ),
-          const SizedBox(width: AppDimensions.paddingXs),
-          Expanded(
-            flex: 3,
-            child: Column(
+      child: isCompact
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
-                  child: _SearchMethodCard(
-                    backgroundColor: AppColors.searchCameraBg,
-                    iconBackgroundColor: AppColors.searchCameraIconBg,
-                    foregroundColor: AppColors.searchCameraPrimary,
-                    icon: Icons.camera_alt_rounded,
-                    title: AppStrings.cameraSearch,
-                    description: AppStrings.cameraSearchDescription,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const CameraScreen()),
-                    ),
-                  ),
+                  child: _voiceSearchCard(context),
                 ),
-                const SizedBox(height: AppDimensions.paddingXs),
+                const SizedBox(height: AppDimensions.paddingSm),
                 Expanded(
-                  child: _SearchMethodCard(
-                    backgroundColor: AppColors.searchChatBg,
-                    iconBackgroundColor: AppColors.searchChatIconBg,
-                    foregroundColor: AppColors.searchChatPrimary,
-                    icon: Icons.smart_toy_rounded,
-                    title: AppStrings.chatSearch,
-                    description: AppStrings.chatSearchDescription,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ChatbotScreen()),
-                    ),
+                  child: _cameraSearchCard(context),
+                ),
+                const SizedBox(height: AppDimensions.paddingSm),
+                Expanded(
+                  child: _chatSearchCard(context),
+                ),
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  flex: 4,
+                  child: _voiceSearchCard(context),
+                ),
+                const SizedBox(width: AppDimensions.paddingXs),
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    children: [
+                      Expanded(child: _cameraSearchCard(context)),
+                      const SizedBox(height: AppDimensions.paddingXs),
+                      Expanded(child: _chatSearchCard(context)),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+    );
+  }
+
+  Widget _voiceSearchCard(BuildContext context) {
+    return _SearchMethodCard(
+      backgroundColor: AppColors.searchVoiceBg,
+      iconBackgroundColor: AppColors.searchVoiceIconBg,
+      foregroundColor: AppColors.searchVoicePrimary,
+      icon: Icons.mic_rounded,
+      title: AppStrings.voiceSearch,
+      description: AppStrings.voiceSearchDescription,
+      isPrimary: true,
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const VoiceSearchScreen()),
+      ),
+    );
+  }
+
+  Widget _cameraSearchCard(BuildContext context) {
+    return _SearchMethodCard(
+      backgroundColor: AppColors.searchCameraBg,
+      iconBackgroundColor: AppColors.searchCameraIconBg,
+      foregroundColor: AppColors.searchCameraPrimary,
+      icon: Icons.camera_alt_rounded,
+      title: AppStrings.cameraSearch,
+      description: AppStrings.cameraSearchDescription,
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CameraScreen()),
+      ),
+    );
+  }
+
+  Widget _chatSearchCard(BuildContext context) {
+    return _SearchMethodCard(
+      backgroundColor: AppColors.searchChatBg,
+      iconBackgroundColor: AppColors.searchChatIconBg,
+      foregroundColor: AppColors.searchChatPrimary,
+      icon: Icons.smart_toy_rounded,
+      title: AppStrings.chatSearch,
+      description: AppStrings.chatSearchDescription,
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ChatbotScreen()),
       ),
     );
   }
@@ -426,6 +449,9 @@ class _SearchMethodCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = AppResponsive.isCompact(context);
+    final effectivePrimary = isPrimary && !compact;
+
     return Material(
       color: backgroundColor,
       borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
@@ -433,13 +459,15 @@ class _SearchMethodCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
         child: Padding(
-          padding: const EdgeInsets.all(AppDimensions.paddingLg),
+          padding: EdgeInsets.all(
+            compact ? AppDimensions.paddingMd : AppDimensions.paddingLg,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: isPrimary ? 52 : 40,
-                height: isPrimary ? 52 : 40,
+                width: effectivePrimary ? 52 : 40,
+                height: effectivePrimary ? 52 : 40,
                 decoration: BoxDecoration(
                   color: iconBackgroundColor,
                   shape: BoxShape.circle,
@@ -447,7 +475,7 @@ class _SearchMethodCard extends StatelessWidget {
                 child: Icon(
                   icon,
                   color: foregroundColor,
-                  size: isPrimary ? 28 : 20,
+                  size: effectivePrimary ? 28 : 20,
                 ),
               ),
               const Spacer(),
@@ -462,7 +490,7 @@ class _SearchMethodCard extends StatelessWidget {
                           title,
                           style: TextStyle(
                             color: foregroundColor,
-                            fontSize: isPrimary ? 24 : 16,
+                            fontSize: effectivePrimary ? 24 : 16,
                             fontWeight: FontWeight.w800,
                             height: 1.2,
                           ),
@@ -472,7 +500,7 @@ class _SearchMethodCard extends StatelessWidget {
                           description,
                           style: TextStyle(
                             color: foregroundColor.withValues(alpha: 0.65),
-                            fontSize: isPrimary ? 14 : 11,
+                            fontSize: effectivePrimary ? 14 : 11,
                             height: 1.35,
                           ),
                         ),
@@ -482,7 +510,7 @@ class _SearchMethodCard extends StatelessWidget {
                   Icon(
                     Icons.arrow_forward_ios_rounded,
                     color: foregroundColor.withValues(alpha: 0.5),
-                    size: isPrimary ? 18 : 14,
+                    size: effectivePrimary ? 18 : 14,
                   ),
                 ],
               ),

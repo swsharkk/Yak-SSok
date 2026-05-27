@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/responsive.dart';
 import '../../../core/theme.dart';
 import '../../../core/utils.dart';
 import '../../../models/health_summary.dart';
@@ -22,33 +23,55 @@ class HealthSummaryCard extends StatelessWidget {
         ? '${summary.hydrationLiters.toStringAsFixed(1)} / ${(summary.waterGoalMl! / 1000).toStringAsFixed(1)}L'
         : '${summary.hydrationLiters.toStringAsFixed(1)}L';
 
+    final compact = AppResponsive.isCompact(context);
+
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _MetricTile(
-                iconBg: AppColors.hydrationBg,
-                iconColor: AppColors.hydrationIcon,
-                icon: Icons.water_drop_rounded,
-                label: AppStrings.hydration,
-                value: waterValue,
-                onTap: onAddWater,
-                tapHint: '+250mL',
+        if (compact) ...[
+          _MetricTile(
+            iconBg: AppColors.hydrationBg,
+            iconColor: AppColors.hydrationIcon,
+            icon: Icons.water_drop_rounded,
+            label: AppStrings.hydration,
+            value: waterValue,
+            onTap: onAddWater,
+            tapHint: '+250mL',
+          ),
+          const SizedBox(height: AppDimensions.paddingMd),
+          _MetricTile(
+            iconBg: AppColors.stepsBg,
+            iconColor: AppColors.stepsIcon,
+            icon: Icons.directions_walk_rounded,
+            label: AppStrings.steps,
+            value: AppFormat.thousands(summary.steps),
+          ),
+        ] else ...[
+          Row(
+            children: [
+              Expanded(
+                child: _MetricTile(
+                  iconBg: AppColors.hydrationBg,
+                  iconColor: AppColors.hydrationIcon,
+                  icon: Icons.water_drop_rounded,
+                  label: AppStrings.hydration,
+                  value: waterValue,
+                  onTap: onAddWater,
+                  tapHint: '+250mL',
+                ),
               ),
-            ),
-            const SizedBox(width: AppDimensions.paddingMd),
-            Expanded(
-              child: _MetricTile(
-                iconBg: AppColors.stepsBg,
-                iconColor: AppColors.stepsIcon,
-                icon: Icons.directions_walk_rounded,
-                label: AppStrings.steps,
-                value: AppFormat.thousands(summary.steps),
+              const SizedBox(width: AppDimensions.paddingMd),
+              Expanded(
+                child: _MetricTile(
+                  iconBg: AppColors.stepsBg,
+                  iconColor: AppColors.stepsIcon,
+                  icon: Icons.directions_walk_rounded,
+                  label: AppStrings.steps,
+                  value: AppFormat.thousands(summary.steps),
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
         if (summary.calories != null) ...[
           const SizedBox(height: AppDimensions.paddingMd),
           _CalorieTile(calories: summary.calories!),
@@ -95,22 +118,26 @@ class _MetricTile extends StatelessWidget {
               children: [
                 Icon(icon, color: iconColor, size: AppDimensions.iconLg),
                 if (onTap != null && tapHint != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimensions.paddingSm,
-                      vertical: AppDimensions.paddingXs,
-                    ),
-                    decoration: BoxDecoration(
-                      color: iconColor.withValues(alpha: 0.15),
-                      borderRadius:
-                          BorderRadius.circular(AppDimensions.radiusPill),
-                    ),
-                    child: Text(
-                      tapHint!,
-                      style: TextStyle(
-                        color: iconColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimensions.paddingSm,
+                        vertical: AppDimensions.paddingXs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: iconColor.withValues(alpha: 0.15),
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.radiusPill),
+                      ),
+                      child: Text(
+                        tapHint!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: iconColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
@@ -128,6 +155,8 @@ class _MetricTile extends StatelessWidget {
             const SizedBox(height: AppDimensions.paddingXs),
             Text(
               value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 22,
@@ -173,26 +202,30 @@ class _CalorieTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppDimensions.paddingMd),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                AppStrings.calories,
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  AppStrings.calories,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              Text(
-                '${AppFormat.thousands(calories)} kcal',
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
+                Text(
+                  '${AppFormat.thousands(calories)} kcal',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

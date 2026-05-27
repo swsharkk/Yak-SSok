@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/responsive.dart';
 import '../../core/theme.dart';
 import '../../models/schedule.dart';
 import '../../models/adaptive_ui_settings.dart';
@@ -24,10 +25,8 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = ref.watch(todayProgressProvider);
     final schedules = ref.watch(todaySchedulesProvider);
-    final uiSettings = ref
-        .watch(adaptiveUIControllerProvider)
-        .valueOrNull
-        ?? const AdaptiveUISettings();
+    final uiSettings = ref.watch(adaptiveUIControllerProvider).valueOrNull ??
+        const AdaptiveUISettings();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -46,12 +45,7 @@ class HomeScreen extends ConsumerWidget {
             toolbarHeight: 64,
           ),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              AppDimensions.paddingXl,
-              AppDimensions.paddingXl,
-              AppDimensions.paddingXl,
-              AppDimensions.paddingXxl,
-            ),
+            padding: AppResponsive.pagePadding(context),
             sliver: SliverToBoxAdapter(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

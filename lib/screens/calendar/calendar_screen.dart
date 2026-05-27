@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/responsive.dart';
 import '../../core/theme.dart';
 import '../../widgets/emergency_button.dart';
 import 'widgets/calendar_schedule_section.dart';
@@ -12,11 +13,11 @@ class CalendarScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          SliverAppBar(
+          const SliverAppBar(
             automaticallyImplyLeading: false,
             backgroundColor: AppColors.background,
             elevation: 0,
@@ -29,13 +30,11 @@ class CalendarScreen extends ConsumerWidget {
             toolbarHeight: 64,
           ),
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              AppDimensions.paddingXl,
-              AppDimensions.paddingMd,
-              AppDimensions.paddingXl,
-              AppDimensions.paddingXxl,
+            padding: AppResponsive.pagePadding(
+              context,
+              top: AppDimensions.paddingMd,
             ),
-            sliver: SliverToBoxAdapter(
+            sliver: const SliverToBoxAdapter(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -66,11 +65,11 @@ class _CalendarAppBar extends StatelessWidget {
     return Row(
       children: [
         Transform.translate(
-          offset: const Offset(-18, 0),
+          offset: Offset(AppResponsive.headerLogoOffset(context), 0),
           child: Image.asset(
             _logoPath,
-            width: 220,
-            height: 44,
+            width: AppResponsive.logoWidth(context),
+            height: AppResponsive.logoHeight(context),
             fit: BoxFit.cover,
             alignment: Alignment.center,
             semanticLabel: AppStrings.appName,
