@@ -59,11 +59,14 @@ def parse_prescription(raw_text: str = Body(..., media_type="text/plain")):
         print("[AI 분석 완료] JSON 데이터 반환 성공")
         return {"status": "success", "data": parsed_data["drugs"]}
 
+    # 👈 파싱 쪽에도 503 과부하 방어 코드를 추가했습니다!
     except Exception as e:
         error_msg = str(e)
         print(f"[에러 발생] {error_msg}")
         if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
             return {"status": "error", "message": "현재 AI 요청이 너무 많습니다. 약 1분 후 다시 시도해 주세요."}
+        elif "503" in error_msg or "UNAVAILABLE" in error_msg:
+            return {"status": "error", "message": "현재 구글 AI 서버에 접속자가 몰려 분석이 지연되고 있습니다. 잠시 후 다시 시도해 주세요."}
         return {"status": "error", "message": error_msg}
 
 # ----------------------------------------------------
@@ -118,7 +121,6 @@ def rag_chat(request: ChatRequest):
         )
         return {"status": "success", "answer": response.text}
         
-    # 챗봇 에러 방어 코드 (429 및 503 처리 완벽 적용)
     except Exception as e:
         error_msg = str(e)
         print(f"[챗봇 에러 발생] {error_msg}")
