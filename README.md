@@ -99,6 +99,7 @@ flutter run -d android
 
 ```text
 GOOGLE_API_KEY="본인의_구글_API_키"
+PUBLIC_DATA_API_KEY="본인의 식약처_API_키"
 ```
 
 ### 2. 패키지 설치
