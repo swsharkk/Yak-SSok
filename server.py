@@ -1,109 +1,91 @@
 import os
 import json
-<<<<<<< HEAD
-=======
 import requests
->>>>>>> 2f8afe22ecb75bbcf1810297467cbf35b60c1ddc
 import uvicorn
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, Body
+from pydantic import BaseModel, Field
 from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
-<<<<<<< HEAD
-# 보안 처리: .env 파일에서 키를 몰래 불러옴
-load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-
-# 구글 최신 공식 SDK 클라이언트 연결
-client = genai.Client(api_key=GOOGLE_API_KEY)
-
-app = FastAPI(title="약 봉투 파싱 AI 서버 (최신 SDK 버전)")
-=======
 # 환경 변수 로드
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 PUBLIC_DATA_API_KEY = os.getenv("DATA_GO_KR_API_KEY")
 
-# 구글 제미나이 클라이언트 초기화
+# 구글 최신 공식 SDK 클라이언트 연결
 client = genai.Client(api_key=GOOGLE_API_KEY)
-app = FastAPI(title="노년층 맞춤형 지능형 의약품 관리 AI 서버")
->>>>>>> 2f8afe22ecb75bbcf1810297467cbf35b60c1ddc
 
-class OcrRequest(BaseModel):
-    raw_text: str
+app = FastAPI(title="노년층 맞춤형 지능형 의약품 관리 AI 서버 (최종 통합본)")
 
+# ----------------------------------------------------
+# 1. OCR 파싱용 AI 출력 양식 (앱으로 보낼 JSON 규칙)
+# ----------------------------------------------------
+class DrugInfo(BaseModel):
+    drug_name: str = Field(description="약이름(실제 식약처 등록 명칭)")
+    daily_frequency: int = Field(description="1일복용횟수(숫자)")
+    duration_days: int = Field(description="총투약일수(숫자)")
+
+class PrescriptionResult(BaseModel):
+    drugs: list[DrugInfo]
+
+# ----------------------------------------------------
+# API 1: 약 봉투 파싱 (앱에서 ML Kit '순수 텍스트'를 그대로 던져주면 됨)
+# ----------------------------------------------------
 @app.post("/api/parse-prescription")
-def parse_prescription(request: OcrRequest):
-<<<<<<< HEAD
-    print("[데이터 수신] 텍스트가 도착했습니다. 최신 Gemini가 분석을 시작합니다.")
+def parse_prescription(raw_text: str = Body(..., media_type="text/plain")):
+    print("[데이터 수신] 텍스트가 도착했습니다. 최신 Gemini 2.5가 분석을 시작합니다.")
     
     prompt = f"""
     너는 정확한 의료 데이터 분석 AI야. 
-    아래에 사용자가 추출한 약국 영수증 텍스트를 줄게. 오타를 문맥에 맞게 교정해서 
-    반드시 아래 JSON 배열 형태로만 대답해. 마크다운 기호(```json)나 다른 설명은 절대 넣지마.
-    
-=======
-    prompt = f"""
-    너는 정확한 의료 데이터 분석 AI야.
-    아래에 사용자가 추출한 약국 영수증 텍스트를 줄게. 오타를 문맥에 맞게 교정해서
-    반드시 아래 JSON 배열 형태로만 대답해. 마크다운 기호(```json)나 다른 설명은 절대 넣지마.
-
->>>>>>> 2f8afe22ecb75bbcf1810297467cbf35b60c1ddc
-    [출력 JSON 양식]
-    [
-      {{
-        "drug_name": "약이름(실제 식약처 등록 명칭)",
-        "daily_frequency": 1일복용횟수(숫자),
-        "duration_days": 총투약일수(숫자)
-      }}
-    ]
-<<<<<<< HEAD
+    아래에 사용자가 추출한 약국 영수증 텍스트를 줄게. 오타를 문맥에 맞게 교정해서 약 정보를 추출해줘.
     
     [사용자 영수증 텍스트]
-    {request.raw_text}
+    {raw_text}
     """
 
     try:
-        # 최신 방식으로 AI에게 작업 지시
         response = client.models.generate_content(
             model='gemini-2.5-flash',
-            contents=prompt
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=PrescriptionResult,
+                temperature=0.1, 
+            )
         )
         
-        result_text = response.text
-        clean_json = result_text.replace("```json", "").replace("```", "").strip()
-        parsed_data = json.loads(clean_json)
-        
-        print("[AI 분석 완료] JSON 데이터 반환")
-        return {"status": "success", "data": parsed_data}
+        parsed_data = json.loads(response.text)
+        print("[AI 분석 완료] JSON 데이터 반환 성공")
+        return {"status": "success", "data": parsed_data["drugs"]}
 
     except Exception as e:
-        print(f"[에러 발생] {e}")
-        return {"status": "error", "message": str(e)}
-=======
+        error_msg = str(e)
+        print(f"[에러 발생] {error_msg}")
+        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+            return {"status": "error", "message": "현재 AI 요청이 너무 많습니다. 약 1분 후 다시 시도해 주세요."}
+        return {"status": "error", "message": error_msg}
 
-    [사용자 영수증 텍스트]
-    {request.raw_text}
-    """
-    try:
-        response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
-        clean_json = response.text.replace("```json", "").replace("```", "").strip()
-        parsed_data = json.loads(clean_json)
-        return {"status": "success", "data": parsed_data}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
+# ----------------------------------------------------
+# API 2: 약 정보 조회 및 AI 약사 채팅
+# ----------------------------------------------------
 class ChatRequest(BaseModel):
     question: str
     context_drugs: list[str] = []
 
 def fetch_drug_info_from_api(drug_name: str) -> str:
-    if not PUBLIC_DATA_API_KEY: return "API 키 오류"
+    if not PUBLIC_DATA_API_KEY: 
+        return "API 키 오류"
     
-    # 식약처 API 주소 (마크다운 오류 수정됨)
-    url = "[http://apis.data.go.kr/1471000/DrbEasyDrugInfoService/getDrbEasyDrugList](http://apis.data.go.kr/1471000/DrbEasyDrugInfoService/getDrbEasyDrugList)"
-    params = {"serviceKey": PUBLIC_DATA_API_KEY, "itemName": drug_name, "type": "json", "numOfRows": 1, "pageNo": 1}
+    # 식약처 API 주소
+    url = "http://apis.data.go.kr/1471000/DrbEasyDrugInfoService/getDrbEasyDrugList"
+    params = {
+        "serviceKey": PUBLIC_DATA_API_KEY, 
+        "itemName": drug_name, 
+        "type": "json", 
+        "numOfRows": 1, 
+        "pageNo": 1
+    }
     
     try:
         res = requests.get(url, params=params)
@@ -130,11 +112,21 @@ def rag_chat(request: ChatRequest):
     {request.question}
     """
     try:
-        response = client.models.generate_content(model='gemini-2.5-flash', contents=system_prompt)
+        response = client.models.generate_content(
+            model='gemini-2.5-flash', 
+            contents=system_prompt
+        )
         return {"status": "success", "answer": response.text}
+        
+    # 챗봇 에러 방어 코드 (429 및 503 처리 완벽 적용)
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        error_msg = str(e)
+        print(f"[챗봇 에러 발생] {error_msg}")
+        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
+            return {"status": "error", "message": "현재 챗봇 상담이 너무 많아 대기 중입니다. 1분 후 다시 질문해 주세요."}
+        elif "503" in error_msg or "UNAVAILABLE" in error_msg:
+            return {"status": "error", "message": "현재 구글 AI 서버에 접속자가 몰려 답변이 지연되고 있습니다. 잠시 후 다시 시도해 주세요."}
+        return {"status": "error", "message": error_msg}
 
 if __name__ == "__main__":
     uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
->>>>>>> 2f8afe22ecb75bbcf1810297467cbf35b60c1ddc
