@@ -7,32 +7,7 @@ import '../../../models/schedule.dart';
 import '../../../providers/adaptive_ui_provider.dart';
 import '../../medicine_detail/medicine_detail_screen.dart';
 
-/// 카드 비주얼 그룹. 슬롯/상태 조합으로 결정.
-enum _Variant { morning, lunch, evening, alert }
-
-class _VariantStyle {
-  const _VariantStyle({
-    required this.bg,
-    required this.chipBg,
-    required this.chipText,
-    required this.button,
-    required this.buttonText,
-    required this.buttonOutlined,
-    required this.label,
-    required this.actionLabel,
-    required this.actionIcon,
-  });
-
-  final Color bg;
-  final Color chipBg;
-  final Color chipText;
-  final Color button;
-  final Color buttonText;
-  final bool buttonOutlined;
-  final String label;
-  final String actionLabel;
-  final IconData? actionIcon;
-}
+enum _Slot { morning, lunch, evening, bedtime, alert }
 
 class MedicineCard extends StatelessWidget {
   const MedicineCard({
@@ -44,114 +19,123 @@ class MedicineCard extends StatelessWidget {
   final Schedule schedule;
   final VoidCallback? onActionPressed;
 
-  _Variant get _variant {
-    if (schedule.status == ScheduleStatus.missed) return _Variant.alert;
-    switch (schedule.slot) {
-      case ScheduleSlot.morning:
-        return _Variant.morning;
-      case ScheduleSlot.lunch:
-        return _Variant.lunch;
-      case ScheduleSlot.evening:
-      case ScheduleSlot.bedtime:
-      case ScheduleSlot.custom:
-        return _Variant.evening;
-    }
+  _Slot get _slot {
+    if (schedule.status == ScheduleStatus.missed) return _Slot.alert;
+    return switch (schedule.slot) {
+      ScheduleSlot.morning  => _Slot.morning,
+      ScheduleSlot.lunch    => _Slot.lunch,
+      ScheduleSlot.evening  => _Slot.evening,
+      ScheduleSlot.bedtime  => _Slot.bedtime,
+      ScheduleSlot.custom   => _Slot.evening,
+    };
   }
 
-  _VariantStyle _styleFor(_Variant v) {
-    switch (v) {
-      case _Variant.morning:
-        return const _VariantStyle(
-          bg: AppColors.morningBg,
-          chipBg: AppColors.morningPrimary,
-          chipText: Colors.white,
-          button: AppColors.morningPrimary,
-          buttonText: Colors.white,
-          buttonOutlined: false,
-          label: AppStrings.slotMorning,
-          actionLabel: AppStrings.actionTaken,
-          actionIcon: Icons.done_all_rounded,
-        );
-      case _Variant.lunch:
-        return const _VariantStyle(
-          bg: AppColors.lunchBg,
-          chipBg: AppColors.lunchPrimary,
-          chipText: Colors.white,
-          button: AppColors.lunchPrimaryDark,
-          buttonText: AppColors.lunchPrimaryDark,
-          buttonOutlined: true,
-          label: AppStrings.slotLunch,
-          actionLabel: AppStrings.actionTake,
-          actionIcon: null,
-        );
-      case _Variant.evening:
-        return const _VariantStyle(
-          bg: AppColors.eveningBg,
-          chipBg: AppColors.eveningPrimary,
-          chipText: Colors.white,
-          button: AppColors.eveningPrimary,
-          buttonText: AppColors.eveningPrimary,
-          buttonOutlined: true,
-          label: AppStrings.slotEvening,
-          actionLabel: AppStrings.actionTake,
-          actionIcon: null,
-        );
-      case _Variant.alert:
-        return const _VariantStyle(
-          bg: AppColors.alertBg,
-          chipBg: AppColors.alertPrimary,
-          chipText: Colors.white,
-          button: AppColors.alertPrimary,
-          buttonText: Colors.white,
-          buttonOutlined: false,
-          label: AppStrings.slotAlert,
-          actionLabel: AppStrings.actionTakeNow,
-          actionIcon: null,
-        );
-    }
-  }
+  Color get _accentColor => switch (_slot) {
+    _Slot.morning => AppColors.morningAccent,
+    _Slot.lunch   => AppColors.lunchAccent,
+    _Slot.evening => AppColors.eveningAccent,
+    _Slot.bedtime => AppColors.bedtimeAccent,
+    _Slot.alert   => AppColors.alertPrimary,
+  };
+
+  Color get _chipBg => switch (_slot) {
+    _Slot.morning => AppColors.morningChipBg,
+    _Slot.lunch   => AppColors.lunchChipBg,
+    _Slot.evening => AppColors.eveningChipBg,
+    _Slot.bedtime => AppColors.bedtimeChipBg,
+    _Slot.alert   => AppColors.alertChipBg,
+  };
+
+  String get _slotLabel => switch (_slot) {
+    _Slot.morning => AppStrings.slotMorning,
+    _Slot.lunch   => AppStrings.slotLunch,
+    _Slot.evening => AppStrings.slotEvening,
+    _Slot.bedtime => AppStrings.slotBedtime,
+    _Slot.alert   => AppStrings.slotAlert,
+  };
 
   @override
   Widget build(BuildContext context) {
-    final style = _styleFor(_variant);
-    final isAlert = _variant == _Variant.alert;
+    final isTaken = schedule.status == ScheduleStatus.taken;
+    final isAlert = _slot == _Slot.alert;
 
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => MedicineDetailScreen(medicine: schedule.medicine),
-        ),
-      ),
-      child: Container(
-      padding: const EdgeInsets.all(AppDimensions.cardPadding),
-      decoration: BoxDecoration(
-        color: style.bg,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _HeaderRow(style: style, scheduledAt: schedule.scheduledAt),
-          const SizedBox(height: AppDimensions.paddingLg),
-          _BodyRow(schedule: schedule, isAlert: isAlert),
-          const SizedBox(height: AppDimensions.paddingLg),
-          _ActionButton(
-            style: style,
-            isTaken: schedule.status == ScheduleStatus.taken,
-            onPressed: onActionPressed,
+    return Opacity(
+      opacity: isTaken ? 0.65 : 1.0,
+      child: GestureDetector(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MedicineDetailScreen(medicine: schedule.medicine),
           ),
-        ],
-      ),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+            boxShadow: AppShadows.card,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 슬롯 컬러 accent bar
+                  Container(
+                    width: AppDimensions.slotBarWidth,
+                    color: _accentColor,
+                  ),
+                  // 카드 내용
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppDimensions.paddingLg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _CardHeader(
+                            label: _slotLabel,
+                            accentColor: _accentColor,
+                            chipBg: _chipBg,
+                            scheduledAt: schedule.scheduledAt,
+                          ),
+                          const SizedBox(height: AppDimensions.paddingMd),
+                          _CardBody(
+                            schedule: schedule,
+                            isAlert: isAlert,
+                            accentColor: _accentColor,
+                          ),
+                          const SizedBox(height: AppDimensions.paddingMd),
+                          _CardAction(
+                            isTaken: isTaken,
+                            isAlert: isAlert,
+                            accentColor: _accentColor,
+                            onPressed: onActionPressed,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
-class _HeaderRow extends StatelessWidget {
-  const _HeaderRow({required this.style, required this.scheduledAt});
+class _CardHeader extends StatelessWidget {
+  const _CardHeader({
+    required this.label,
+    required this.accentColor,
+    required this.chipBg,
+    required this.scheduledAt,
+  });
 
-  final _VariantStyle style;
+  final String label;
+  final Color accentColor;
+  final Color chipBg;
   final DateTime scheduledAt;
 
   @override
@@ -159,20 +143,17 @@ class _HeaderRow extends StatelessWidget {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppDimensions.paddingMd,
-            vertical: AppDimensions.paddingXs + 2,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: style.chipBg,
+            color: chipBg,
             borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
           ),
           child: Text(
-            style.label,
+            label,
             style: TextStyle(
-              color: style.chipText,
+              color: accentColor,
               fontSize: 12,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
@@ -180,9 +161,9 @@ class _HeaderRow extends StatelessWidget {
         Text(
           AppFormat.timeOfDay12h(scheduledAt),
           style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
+            color: AppColors.textMuted,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
@@ -190,19 +171,38 @@ class _HeaderRow extends StatelessWidget {
   }
 }
 
-class _BodyRow extends StatelessWidget {
-  const _BodyRow({required this.schedule, required this.isAlert});
+class _CardBody extends StatelessWidget {
+  const _CardBody({
+    required this.schedule,
+    required this.isAlert,
+    required this.accentColor,
+  });
 
   final Schedule schedule;
   final bool isAlert;
+  final Color accentColor;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        _MedicineThumbnail(isAlert: isAlert, imageUrl: schedule.medicine.imageUrl),
-        const SizedBox(width: AppDimensions.paddingLg),
+        Container(
+          width: AppDimensions.medicineThumbSize,
+          height: AppDimensions.medicineThumbSize,
+          decoration: BoxDecoration(
+            color: isAlert
+                ? AppColors.alertChipBg
+                : AppColors.background,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+          ),
+          child: Icon(
+            isAlert ? Icons.warning_amber_rounded : Icons.medication_rounded,
+            color: isAlert ? AppColors.alertPrimary : AppColors.textMuted,
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: AppDimensions.paddingMd),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,20 +210,21 @@ class _BodyRow extends StatelessWidget {
               Text(
                 schedule.medicine.name,
                 style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
+                  height: 1.3,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: AppDimensions.paddingXs),
+              const SizedBox(height: 3),
               Text(
-                _subText(schedule),
+                _subText,
                 style: TextStyle(
-                  color: isAlert
-                      ? AppColors.alertPrimaryDark
-                      : AppColors.textSecondary,
                   fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w400,
+                  color: isAlert ? AppColors.alertPrimary : AppColors.textSecondary,
                 ),
               ),
             ],
@@ -233,142 +234,99 @@ class _BodyRow extends StatelessWidget {
     );
   }
 
-  String _subText(Schedule s) {
-    if (s.status == ScheduleStatus.missed) return AppStrings.missedMessage;
+  String get _subText {
+    if (schedule.status == ScheduleStatus.missed) return AppStrings.missedMessage;
     final parts = <String>[];
-    if (s.doseCount != null) parts.add('${s.doseCount}알');
-    if (s.medicine.dosage != null) parts.add(s.medicine.dosage!);
-    if (s.mealRelation != null) parts.add(s.mealRelation!);
-    return parts.join(' • ');
+    if (schedule.doseCount != null) parts.add('${schedule.doseCount}알');
+    if (schedule.medicine.dosage != null) parts.add(schedule.medicine.dosage!);
+    if (schedule.mealRelation != null) parts.add(schedule.mealRelation!);
+    return parts.join(' · ');
   }
 }
 
-class _MedicineThumbnail extends StatelessWidget {
-  const _MedicineThumbnail({required this.isAlert, this.imageUrl});
-
-  final bool isAlert;
-  final String? imageUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: AppDimensions.medicineThumbSize,
-      height: AppDimensions.medicineThumbSize,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
-      ),
-      alignment: Alignment.center,
-      child: isAlert
-          ? const Icon(
-              Icons.warning_rounded,
-              color: AppColors.alertPrimary,
-              size: AppDimensions.iconXl,
-            )
-          : Icon(
-              Icons.medication_rounded,
-              color: Colors.grey.shade400,
-              size: AppDimensions.iconXl,
-            ),
-    );
-  }
-}
-
-class _ActionButton extends ConsumerWidget {
-  const _ActionButton({
-    required this.style,
+class _CardAction extends ConsumerWidget {
+  const _CardAction({
     required this.isTaken,
+    required this.isAlert,
+    required this.accentColor,
     this.onPressed,
   });
 
-  final _VariantStyle style;
   final bool isTaken;
+  final bool isAlert;
+  final Color accentColor;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final btnScale = ref
-        .watch(adaptiveUIControllerProvider)
-        .valueOrNull
-        ?.buttonScale ?? 1.0;
-    final btnHeight = 48.0 * btnScale;
-
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
-    );
+    final btnScale = ref.watch(adaptiveUIControllerProvider).valueOrNull?.buttonScale ?? 1.0;
+    final height = 44.0 * btnScale;
+    final radius = BorderRadius.circular(AppDimensions.radiusMd);
 
     if (isTaken) {
       return SizedBox(
-        width: double.infinity,
-        height: btnHeight,
-        child: ElevatedButton.icon(
-          onPressed: null,
-          icon: const Icon(Icons.check_circle_rounded, size: 18),
-          label: const Text(
-            '복용완료',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        height: height,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            borderRadius: radius,
           ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.progressTeal.withValues(alpha: 0.15),
-            foregroundColor: AppColors.progressTeal,
-            disabledBackgroundColor:
-                AppColors.progressTeal.withValues(alpha: 0.15),
-            disabledForegroundColor: AppColors.progressTeal,
-            elevation: 0,
-            shape: shape,
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.check_circle_rounded,
+                  size: 16, color: AppColors.primary),
+              SizedBox(width: 6),
+              Text(
+                AppStrings.actionTaken,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
           ),
         ),
       );
     }
 
-    final child = Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (style.actionIcon != null) ...[
-          Icon(style.actionIcon, size: AppDimensions.iconMd),
-          const SizedBox(width: AppDimensions.paddingSm),
-        ],
-        Text(
-          style.actionLabel,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+    if (isAlert) {
+      return SizedBox(
+        width: double.infinity,
+        height: height,
+        child: ElevatedButton(
+          onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.alertPrimary,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: radius),
+          ),
+          child: const Text(
+            AppStrings.actionTakeNow,
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
         ),
-      ],
-    );
+      );
+    }
 
     return SizedBox(
       width: double.infinity,
-      height: btnHeight,
-      child: style.buttonOutlined
-          ? OutlinedButton(
-              onPressed: onPressed,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: style.buttonText,
-                side: BorderSide(color: style.button, width: 1.5),
-                backgroundColor: AppColors.surface,
-                shape: shape,
-                splashFactory: InkRipple.splashFactory,
-              ).copyWith(
-                overlayColor: WidgetStateProperty.all(
-                  style.button.withValues(alpha: 0.12),
-                ),
-              ),
-              child: child,
-            )
-          : ElevatedButton(
-              onPressed: onPressed,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: style.button,
-                foregroundColor: style.buttonText,
-                elevation: 0,
-                shape: shape,
-                splashFactory: InkRipple.splashFactory,
-              ).copyWith(
-                overlayColor: WidgetStateProperty.all(
-                  Colors.white.withValues(alpha: 0.2),
-                ),
-              ),
-              child: child,
-            ),
+      height: height,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: accentColor,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: radius),
+        ),
+        child: const Text(
+          AppStrings.actionTake,
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+      ),
     );
   }
 }

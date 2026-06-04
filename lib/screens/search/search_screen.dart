@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/responsive.dart';
 import '../../core/theme.dart';
 import '../../models/medicine.dart';
 import '../../providers/medicine_provider.dart';
@@ -19,11 +20,11 @@ class SearchScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
-          SliverAppBar(
+          const SliverAppBar(
             automaticallyImplyLeading: false,
             backgroundColor: AppColors.background,
             elevation: 0,
@@ -36,13 +37,8 @@ class SearchScreen extends StatelessWidget {
             toolbarHeight: 64,
           ),
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              AppDimensions.paddingXxl,
-              AppDimensions.paddingXxl,
-              AppDimensions.paddingXxl,
-              AppDimensions.paddingXxl,
-            ),
-            sliver: SliverToBoxAdapter(
+            padding: AppResponsive.pagePadding(context),
+            sliver: const SliverToBoxAdapter(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -284,11 +280,11 @@ class _SearchHeader extends StatelessWidget {
     return Row(
       children: [
         Transform.translate(
-          offset: const Offset(-18, 0),
+          offset: Offset(AppResponsive.headerLogoOffset(context), 0),
           child: Image.asset(
             _logoPath,
-            width: 220,
-            height: 44,
+            width: AppResponsive.logoWidth(context),
+            height: AppResponsive.logoHeight(context),
             fit: BoxFit.cover,
             alignment: Alignment.center,
             semanticLabel: AppStrings.appName,
@@ -336,69 +332,55 @@ class _SearchMethodGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gridHeight =
-        (MediaQuery.sizeOf(context).height * 0.47).clamp(380.0, 520.0);
-
-    return SizedBox(
-      height: gridHeight,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            flex: 4,
-            child: _SearchMethodCard(
-              backgroundColor: AppColors.searchVoiceBg,
-              iconBackgroundColor: AppColors.searchVoiceIconBg,
-              foregroundColor: AppColors.searchVoicePrimary,
-              icon: Icons.mic_rounded,
-              title: AppStrings.voiceSearch,
-              description: AppStrings.voiceSearchDescription,
-              isPrimary: true,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const VoiceSearchScreen()),
+    return Column(
+      children: [
+        // 상단: 음성 + 카메라 (동일 크기 2열)
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _SearchMethodCard(
+                  backgroundColor: AppColors.searchVoiceBg,
+                  iconBackgroundColor: AppColors.searchVoiceIconBg,
+                  foregroundColor: AppColors.searchVoicePrimary,
+                  icon: Icons.mic_rounded,
+                  title: '음성 검색',
+                  description: '말씀만 하시면\n찾아드려요',
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const VoiceSearchScreen())),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: AppDimensions.paddingXs),
-          Expanded(
-            flex: 3,
-            child: Column(
-              children: [
-                Expanded(
-                  child: _SearchMethodCard(
-                    backgroundColor: AppColors.searchCameraBg,
-                    iconBackgroundColor: AppColors.searchCameraIconBg,
-                    foregroundColor: AppColors.searchCameraPrimary,
-                    icon: Icons.camera_alt_rounded,
-                    title: AppStrings.cameraSearch,
-                    description: AppStrings.cameraSearchDescription,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const CameraScreen()),
-                    ),
-                  ),
+              const SizedBox(width: AppDimensions.paddingMd),
+              Expanded(
+                child: _SearchMethodCard(
+                  backgroundColor: AppColors.searchCameraBg,
+                  iconBackgroundColor: AppColors.searchCameraIconBg,
+                  foregroundColor: AppColors.searchCameraPrimary,
+                  icon: Icons.camera_alt_rounded,
+                  title: '카메라 촬영',
+                  description: '사진으로\n확인',
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const CameraScreen())),
                 ),
-                const SizedBox(height: AppDimensions.paddingXs),
-                Expanded(
-                  child: _SearchMethodCard(
-                    backgroundColor: AppColors.searchChatBg,
-                    iconBackgroundColor: AppColors.searchChatIconBg,
-                    foregroundColor: AppColors.searchChatPrimary,
-                    icon: Icons.smart_toy_rounded,
-                    title: AppStrings.chatSearch,
-                    description: AppStrings.chatSearchDescription,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ChatbotScreen()),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: AppDimensions.paddingMd),
+        // 하단: 챗봇 (1열 와이드)
+        _SearchMethodCard(
+          backgroundColor: AppColors.searchChatBg,
+          iconBackgroundColor: AppColors.searchChatIconBg,
+          foregroundColor: AppColors.searchChatPrimary,
+          icon: Icons.smart_toy_rounded,
+          title: 'AI 챗봇 상담',
+          description: '약에 대해 무엇이든 물어보세요',
+          isWide: true,
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const ChatbotScreen())),
+        ),
+      ],
     );
   }
 }
@@ -411,7 +393,7 @@ class _SearchMethodCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.description,
-    this.isPrimary = false,
+    this.isWide = false,
     this.onTap,
   });
 
@@ -421,73 +403,95 @@ class _SearchMethodCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String description;
-  final bool isPrimary;
+  final bool isWide;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: backgroundColor,
-      borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
+      borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
         child: Padding(
           padding: const EdgeInsets.all(AppDimensions.paddingLg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: isPrimary ? 52 : 40,
-                height: isPrimary ? 52 : 40,
-                decoration: BoxDecoration(
-                  color: iconBackgroundColor,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  icon,
-                  color: foregroundColor,
-                  size: isPrimary ? 28 : 20,
-                ),
-              ),
-              const Spacer(),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: TextStyle(
-                            color: foregroundColor,
-                            fontSize: isPrimary ? 24 : 16,
-                            fontWeight: FontWeight.w800,
-                            height: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: AppDimensions.paddingXs),
-                        Text(
-                          description,
-                          style: TextStyle(
-                            color: foregroundColor.withValues(alpha: 0.65),
-                            fontSize: isPrimary ? 14 : 11,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
+          child: isWide
+              ? Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: iconBackgroundColor,
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                      ),
+                      child: Icon(icon, color: foregroundColor, size: 22),
                     ),
-                  ),
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: foregroundColor.withValues(alpha: 0.5),
-                    size: isPrimary ? 18 : 14,
-                  ),
-                ],
-              ),
-            ],
-          ),
+                    const SizedBox(width: AppDimensions.paddingLg),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: TextStyle(
+                              color: foregroundColor,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            description,
+                            style: TextStyle(
+                              color: foregroundColor.withValues(alpha: 0.65),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: foregroundColor.withValues(alpha: 0.4),
+                      size: 14,
+                    ),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: iconBackgroundColor,
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                      ),
+                      child: Icon(icon, color: foregroundColor, size: 22),
+                    ),
+                    const SizedBox(height: AppDimensions.paddingXl),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: foregroundColor,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        height: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        color: foregroundColor.withValues(alpha: 0.65),
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ),
     );

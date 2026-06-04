@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/responsive.dart';
 import '../../../core/theme.dart';
 import '../../../providers/calendar_provider.dart';
 import '../../../widgets/loading_indicator.dart';
@@ -14,13 +15,31 @@ class CalendarStatsSection extends ConsumerWidget {
     final statsAsync = ref.watch(calendarStatsProvider);
 
     return statsAsync.when(
-      data: (s) => Row(
-        children: [
-          Expanded(child: _ComplianceCard(rate: s.complianceRate)),
-          const SizedBox(width: AppDimensions.paddingMd),
-          Expanded(child: _StreakCard(days: s.streakDays)),
-        ],
-      ),
+      data: (s) {
+        final children = [
+          _ComplianceCard(rate: s.complianceRate),
+          _StreakCard(days: s.streakDays),
+        ];
+
+        if (AppResponsive.isCompact(context)) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              children[0],
+              const SizedBox(height: AppDimensions.paddingMd),
+              children[1],
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: children[0]),
+            const SizedBox(width: AppDimensions.paddingMd),
+            Expanded(child: children[1]),
+          ],
+        );
+      },
       loading: () => const SizedBox(height: 100, child: LoadingIndicator()),
       error: (_, __) => const SizedBox.shrink(),
     );

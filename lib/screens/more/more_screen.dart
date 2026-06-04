@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/responsive.dart';
 import '../../core/theme.dart';
 
 import '../auth/login_screen.dart';
@@ -35,21 +36,21 @@ class MoreScreen extends StatelessWidget {
             scrolledUnderElevation: 0,
             surfaceTintColor: Colors.transparent,
             centerTitle: true,
-            title: Image.asset(
-              _logoPath,
-              width: 220,
-              height: 44,
-              fit: BoxFit.cover,
-              semanticLabel: AppStrings.appName,
+            title: Builder(
+              builder: (context) => Image.asset(
+                _logoPath,
+                width: AppResponsive.logoWidth(context),
+                height: AppResponsive.logoHeight(context),
+                fit: BoxFit.cover,
+                semanticLabel: AppStrings.appName,
+              ),
             ),
             toolbarHeight: 64,
           ),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              AppDimensions.paddingXl,
-              AppDimensions.paddingMd,
-              AppDimensions.paddingXl,
-              AppDimensions.paddingXxl,
+            padding: AppResponsive.pagePadding(
+              context,
+              top: AppDimensions.paddingMd,
             ),
             sliver: SliverToBoxAdapter(
               child: Column(

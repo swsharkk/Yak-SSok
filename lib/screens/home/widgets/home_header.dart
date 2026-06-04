@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/responsive.dart';
 import '../../../core/theme.dart';
 import '../../../widgets/emergency_button.dart';
 
@@ -19,11 +20,11 @@ class HomeHeader extends StatelessWidget {
           padding:
               const EdgeInsets.symmetric(vertical: AppDimensions.paddingXs),
           child: Transform.translate(
-            offset: const Offset(-18, 0),
+            offset: Offset(AppResponsive.headerLogoOffset(context), 0),
             child: Image.asset(
               _logoPath,
-              width: 220,
-              height: 44,
+              width: AppResponsive.logoWidth(context),
+              height: AppResponsive.logoHeight(context),
               fit: BoxFit.cover,
               semanticLabel: AppStrings.appName,
             ),
