@@ -87,7 +87,7 @@ class _GuardianLoginScreenState extends State<GuardianLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const guardianThemeColor = Color(0xFF1A5A96); // 💙 보호자 전용 블루 테마 색상
+    const guardianThemeColor = Color(0xFF1A5A96);
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -150,14 +150,11 @@ class _GuardianLoginScreenState extends State<GuardianLoginScreen> {
               ),
               const Spacer(flex: 1),
               
-              // 💡 image_4e509d.png 이미지의 문구와 1대1 매칭되는 하단 가입/찾기 영역
-             // 💡 하단 가입/찾기 영역 (image_4e509d.png 매칭)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   TextButton(
                     onPressed: () {
-                      // 아이디/비밀번호 찾기 동작
                     },
                     child: const Text(
                       AppStrings.findAccount,
@@ -176,7 +173,6 @@ class _GuardianLoginScreenState extends State<GuardianLoginScreen> {
                   TextButton(
                     onPressed: () => Navigator.push(
                       context,
-                      // 💡 오타(GuardianRSignupScreen)를 'GuardianSignupScreen'으로 완벽 교정!
                       MaterialPageRoute(builder: (_) => const GuardianSignupScreen()), 
                     ),
                     child: const Text(

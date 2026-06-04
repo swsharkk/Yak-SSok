@@ -3,7 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
-import 'widgets/login_button.dart'; // 💡 상대 경로를 auth/widgets/login_button.dart 구조로 완벽 교정
+import 'widgets/login_button.dart';
 
 import 'package:flutter/services.dart';
 
@@ -218,7 +218,6 @@ class _GuardianSignupScreenState extends State<GuardianSignupScreen> {
               
               const SizedBox(height: AppDimensions.paddingXxl),
               
-              // 💡 버튼 텍스트 '가입하기' 변경 및 언제나 동일한 파란색(guardianThemeColor) 적용
               LoginButton(
                 label: '가입하기',
                 backgroundColor: guardianThemeColor,
@@ -290,9 +289,6 @@ class _SignupField extends StatelessWidget {
   }
 }
 
-// 📝 [추가 위치]: guardian_signup_screen.dart 파일 맨 밑에 새로 붙여넣기
- // 💡 복사 기능을 위해 상단 import 구역에 추가하거나 여기에 같이 적어주세요.
-
 class _VerificationCodeCard extends StatelessWidget {
   const _VerificationCodeCard({required this.code});
 
@@ -352,7 +348,6 @@ class _VerificationCodeCard extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () {
-                // 💡 클립보드에 인증코드 즉시 복사
                 Clipboard.setData(ClipboardData(text: code));
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(

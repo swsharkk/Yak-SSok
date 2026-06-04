@@ -37,7 +37,6 @@ class MyInfoScreen extends ConsumerWidget {
           final guardianNumber =
               ref.watch(guardianControllerProvider).valueOrNull;
           
-          // 💡 수정된 부분: profile.uid 대신 FirebaseAuth의 현재 유저 uid를 사용합니다.
           final currentUserUid = FirebaseAuth.instance.currentUser?.uid;
           final verificationCode = (currentUserUid != null && currentUserUid.length >= 6)
               ? currentUserUid.substring(0, 6).toUpperCase()
@@ -57,7 +56,6 @@ class MyInfoScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppDimensions.paddingXxl),
               
-              // 💡 수정된 인증 코드 위젯
               _VerificationCodeCard(code: verificationCode),
 
               const SizedBox(height: AppDimensions.paddingXxl),
