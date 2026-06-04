@@ -14,6 +14,9 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true 
+
+
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -27,7 +30,10 @@ android {
         applicationId = "com.example.yakssok_front"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        
+        // 💡 2번째 수정: 원래 적혀있던 값을 지우고 26으로 변경!
+        minSdk = 26 
+        
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -44,4 +50,9 @@ android {
 
 flutter {
     source = "../.."
+}
+
+// 💡 3번째 수정: 파일 맨 밑에 디슈가링 라이브러리 주소 추가!
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }

@@ -11,3 +11,15 @@ __pycache__/
 # 운영체제 설정 파일 (공유 불필요)
 .DS_Store
 Thumbs.db
+
+# 빌드 및 IDE 설정 파일 제외
+.dart_tool/
+.flutter-plugins-dependencies
+.idea/
+build/
+.metadata
+*.iml
+.pub/
+.pub-cache/
+.packages
+pubspec.lock

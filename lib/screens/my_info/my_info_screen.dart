@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
@@ -35,6 +36,13 @@ class MyInfoScreen extends ConsumerWidget {
         data: (profile) {
           final guardianNumber =
               ref.watch(guardianControllerProvider).valueOrNull;
+          
+          // 💡 수정된 부분: profile.uid 대신 FirebaseAuth의 현재 유저 uid를 사용합니다.
+          final currentUserUid = FirebaseAuth.instance.currentUser?.uid;
+          final verificationCode = (currentUserUid != null && currentUserUid.length >= 6)
+              ? currentUserUid.substring(0, 6).toUpperCase()
+              : 'YAK123';
+
           return ListView(
             padding: const EdgeInsets.all(AppDimensions.paddingXxl),
             children: [
@@ -47,6 +55,11 @@ class MyInfoScreen extends ConsumerWidget {
                 onEdit: () => _showEditDialog(
                     context, ref, profile?.nickname, profile?.name),
               ),
+              const SizedBox(height: AppDimensions.paddingXxl),
+              
+              // 💡 수정된 인증 코드 위젯
+              _VerificationCodeCard(code: verificationCode),
+
               const SizedBox(height: AppDimensions.paddingXxl),
               _GuardianCard(
                 number: guardianNumber,
@@ -72,17 +85,12 @@ class MyInfoScreen extends ConsumerWidget {
     );
   }
 
-  void _showGuardianDialog(
-    BuildContext context,
-    WidgetRef ref,
-    String? current,
-  ) {
+  void _showGuardianDialog(BuildContext context, WidgetRef ref, String? current) {
     final controller = TextEditingController(text: current ?? '');
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('보호자 전화번호',
-            style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text('보호자 전화번호', style: TextStyle(fontWeight: FontWeight.w800)),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.phone,
@@ -98,13 +106,11 @@ class MyInfoScreen extends ConsumerWidget {
                 await ref.read(guardianControllerProvider.notifier).clear();
                 if (ctx.mounted) Navigator.pop(ctx);
               },
-              child: const Text('삭제',
-                  style: TextStyle(color: AppColors.alertPrimary)),
+              child: const Text('삭제', style: TextStyle(color: AppColors.alertPrimary)),
             ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('취소',
-                style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text('취소', style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () async {
@@ -119,6 +125,46 @@ class MyInfoScreen extends ConsumerWidget {
       ),
     );
   }
+
+  void _showEditDialog(BuildContext context, WidgetRef ref, String? currentNickname, String? currentName) {
+    final nicknameController = TextEditingController(text: currentNickname ?? '');
+    final nameController = TextEditingController(text: currentName ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('정보 수정'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nicknameController,
+              decoration: const InputDecoration(labelText: '닉네임'),
+            ),
+            const SizedBox(height: AppDimensions.paddingMd),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: '이름'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('취소')),
+          TextButton(
+            onPressed: () async {
+              await ref.read(profileControllerProvider.notifier).updateProfile(
+                    nickname: nicknameController.text.trim(),
+                    name: nameController.text.trim(),
+                  );
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: const Text('저장'),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
   void _showEditDialog(
     BuildContext context,
@@ -167,7 +213,6 @@ class MyInfoScreen extends ConsumerWidget {
       ),
     );
   }
-}
 
 class _AvatarSection extends StatelessWidget {
   const _AvatarSection({this.avatarUrl});
@@ -388,6 +433,74 @@ class _LogoutButton extends StatelessWidget {
         ),
         child: const Text('로그아웃',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+      ),
+    );
+  }
+}
+class _VerificationCodeCard extends StatelessWidget {
+  const _VerificationCodeCard({required this.code});
+
+  final String code;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimensions.paddingXl,
+          vertical: AppDimensions.paddingLg,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.progressTealLight,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+              ),
+              child: const Icon(
+                Icons.vpn_key_rounded,
+                color: AppColors.progressTeal,
+                size: AppDimensions.iconLg,
+              ),
+            ),
+            const SizedBox(width: AppDimensions.paddingLg),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('보호자 연동 인증 코드',
+                      style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                  const SizedBox(height: 2),
+                  Text(code,
+                      style: const TextStyle(
+                          fontSize: 15, letterSpacing: 2, color: AppColors.progressTeal, fontWeight: FontWeight.w800)),
+                ],
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: code));
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('인증 코드가 복사되었습니다.'), duration: Duration(seconds: 1)));
+              },
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.background,
+                  foregroundColor: AppColors.textSecondary,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusSm))),
+              child: const Text('복사', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
       ),
     );
   }
