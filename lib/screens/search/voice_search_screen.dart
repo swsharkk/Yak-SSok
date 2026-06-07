@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
@@ -13,11 +15,19 @@ class VoiceSearchScreen extends StatefulWidget {
 class _VoiceSearchScreenState extends State<VoiceSearchScreen>
     with TickerProviderStateMixin {
   final SpeechToText _speech = SpeechToText();
+  static const List<String> _dummyTranscriptWords = [
+    '타이레놀',
+    '먹는',
+    '방법',
+    '알려줘',
+  ];
 
   bool _isInitialized = false;
   bool _isListening = false;
   String _recognizedText = '';
   String _statusText = '마이크를 탭해서 시작하세요';
+  Timer? _dummyTranscriptTimer;
+  int _dummyWordIndex = 0;
 
   late AnimationController _pulseController;
   late AnimationController _waveController;
@@ -53,7 +63,7 @@ class _VoiceSearchScreenState extends State<VoiceSearchScreen>
     );
     setState(() {
       _isInitialized = available;
-      if (!available) _statusText = '음성 인식을 사용할 수 없습니다';
+      if (!available) _statusText = '마이크를 탭해서 더미 음성 인식을 시작하세요';
     });
   }
 
@@ -70,10 +80,11 @@ class _VoiceSearchScreenState extends State<VoiceSearchScreen>
   }
 
   Future<void> _toggleListening() async {
-    if (!_isInitialized) return;
-
     if (_isListening) {
-      await _speech.stop();
+      _dummyTranscriptTimer?.cancel();
+      if (_isInitialized) {
+        await _speech.stop();
+      }
       setState(() => _isListening = false);
       _stopAnimations();
     } else {
@@ -83,21 +94,38 @@ class _VoiceSearchScreenState extends State<VoiceSearchScreen>
         _isListening = true;
       });
       _startAnimations();
-
-      await _speech.listen(
-        onResult: (result) {
-          setState(() {
-            _recognizedText = result.recognizedWords;
-            if (_recognizedText.isNotEmpty) {
-              _statusText = '인식된 내용을 확인해주세요';
-            }
-          });
-        },
-        localeId: 'ko-KR',
-        listenFor: const Duration(seconds: 30),
-        pauseFor: const Duration(seconds: 3),
-      );
+      _startDummyTranscript();
     }
+  }
+
+  void _startDummyTranscript() {
+    _dummyTranscriptTimer?.cancel();
+    _dummyWordIndex = 0;
+    _dummyTranscriptTimer = Timer.periodic(
+      const Duration(milliseconds: 520),
+      (timer) {
+        if (!mounted || !_isListening) {
+          timer.cancel();
+          return;
+        }
+
+        if (_dummyWordIndex >= _dummyTranscriptWords.length) {
+          timer.cancel();
+          setState(() {
+            _isListening = false;
+            _statusText = '인식된 내용을 확인해주세요';
+          });
+          _stopAnimations();
+          return;
+        }
+
+        setState(() {
+          _recognizedText =
+              _dummyTranscriptWords.take(_dummyWordIndex + 1).join(' ');
+        });
+        _dummyWordIndex++;
+      },
+    );
   }
 
   void _startAnimations() {
@@ -119,6 +147,7 @@ class _VoiceSearchScreenState extends State<VoiceSearchScreen>
 
   @override
   void dispose() {
+    _dummyTranscriptTimer?.cancel();
     _speech.cancel();
     _pulseController.dispose();
     _waveController.dispose();
@@ -216,7 +245,7 @@ class _MicButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: isInitialized ? onTap : null,
+      onTap: onTap,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -234,14 +263,12 @@ class _MicButton extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: isListening
                     ? AppColors.searchVoicePrimary
-                    : (isInitialized
-                        ? const Color(0xFF2D2D4E)
-                        : Colors.grey.shade800),
+                    : const Color(0xFF2D2D4E),
                 boxShadow: isListening
                     ? [
                         BoxShadow(
-                          color:
-                              AppColors.searchVoicePrimary.withValues(alpha: 0.4),
+                          color: AppColors.searchVoicePrimary
+                              .withValues(alpha: 0.4),
                           blurRadius: 24,
                           spreadRadius: 4,
                         )
@@ -362,4 +389,3 @@ class _SearchButton extends StatelessWidget {
     );
   }
 }
-

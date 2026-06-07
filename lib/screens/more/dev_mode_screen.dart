@@ -1,16 +1,17 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../models/adaptive_ui_settings.dart';
 import '../../models/medicine.dart';
 import '../../models/schedule.dart';
 import '../../providers/adaptive_ui_provider.dart';
 import '../../services/behavior_log_service.dart';
+import '../../services/backend_auth_service.dart';
 import '../../services/notification_service.dart';
+import '../guardian/guardian_login_screen.dart';
 
 class DevModeScreen extends ConsumerWidget {
   const DevModeScreen({super.key});
@@ -38,9 +39,13 @@ class DevModeScreen extends ConsumerWidget {
           const SizedBox(height: AppDimensions.paddingMd),
           _ScoreCard(score: score),
           const SizedBox(height: AppDimensions.paddingXxl),
-          const _SectionLabel(label: 'Firebase DB 테스트'),
+          const _SectionLabel(label: '보호자 앱 화면'),
           const SizedBox(height: AppDimensions.paddingMd),
-          const _FirestoreTestCard(),
+          const _GuardianPreviewCard(),
+          const SizedBox(height: AppDimensions.paddingXxl),
+          const _SectionLabel(label: '백엔드 연결 테스트'),
+          const SizedBox(height: AppDimensions.paddingMd),
+          const _BackendTestCard(),
           const SizedBox(height: AppDimensions.paddingXxl),
           const _SectionLabel(label: '알림 테스트'),
           const SizedBox(height: AppDimensions.paddingMd),
@@ -61,6 +66,65 @@ class DevModeScreen extends ConsumerWidget {
             ),
             child: const Text('초기화 (레벨 1 + 점수 0)',
                 style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GuardianPreviewCard extends StatelessWidget {
+  const _GuardianPreviewCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.paddingXl),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            '캡처용 보호자 모니터링 대시보드',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: AppDimensions.paddingXs),
+          const Text(
+            '복약 현황, 주간 순응도, 위험도 예측 리포트 화면으로 이동합니다.',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: AppDimensions.paddingMd),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const GuardianLoginScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.dashboard_rounded, size: 18),
+            label: const Text(
+              '보호자 페이지 열기',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.progressTeal,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
+              ),
+            ),
           ),
         ],
       ),
@@ -249,25 +313,20 @@ class _ScoreCard extends StatelessWidget {
   }
 }
 
-class _FirestoreTestCard extends StatefulWidget {
-  const _FirestoreTestCard();
+class _BackendTestCard extends StatefulWidget {
+  const _BackendTestCard();
 
   @override
-  State<_FirestoreTestCard> createState() => _FirestoreTestCardState();
+  State<_BackendTestCard> createState() => _BackendTestCardState();
 }
 
-class _FirestoreTestCardState extends State<_FirestoreTestCard> {
+class _BackendTestCardState extends State<_BackendTestCard> {
   bool _loading = false;
-  String _message = '로그인 후 테스트 저장을 눌러주세요.';
+  String _message = '로그인 후 백엔드 연결 테스트를 눌러주세요.';
 
   Future<void> _saveAndRead() async {
-    if (Firebase.apps.isEmpty) {
-      setState(() => _message = 'Firebase 초기화가 필요합니다.');
-      return;
-    }
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    final options = await BackendAuthService.authOptions();
+    if (options == null) {
       setState(() => _message = '먼저 로그인해주세요.');
       return;
     }
@@ -278,27 +337,20 @@ class _FirestoreTestCardState extends State<_FirestoreTestCard> {
     });
 
     try {
-      final db = FirebaseFirestore.instance;
-      await db.collection('frontend_test_messages').add({
-        'uid': user.uid,
-        'email': user.email,
-        'text': '프론트 Firestore 연결 테스트',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      final snapshot = await db
-          .collection('frontend_test_messages')
-          .where('uid', isEqualTo: user.uid)
-          .limit(10)
-          .get();
+      final response = await Dio(BaseOptions(
+        baseUrl: AppConstants.apiBaseUrl,
+        connectTimeout: const Duration(seconds: 6),
+        receiveTimeout: const Duration(seconds: 8),
+      )).get<Map<String, dynamic>>('/profile', options: options);
 
       if (!mounted) return;
       setState(() {
-        _message = '저장 성공. 내 테스트 문서 ${snapshot.docs.length}개 확인됨.';
+        final nickname = response.data?['nickname']?.toString() ?? '사용자';
+        _message = '백엔드 연결 성공. $nickname 프로필을 확인했어요.';
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _message = 'Firestore 오류: $e');
+      setState(() => _message = '백엔드 연결 오류: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

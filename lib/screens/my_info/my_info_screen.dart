@@ -1,11 +1,13 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../core/theme.dart';
 import '../../providers/guardian_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../services/backend_auth_service.dart';
 import '../auth/login_screen.dart';
 
 class MyInfoScreen extends ConsumerWidget {
@@ -14,9 +16,6 @@ class MyInfoScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(profileControllerProvider);
-    final email = Firebase.apps.isEmpty
-        ? ''
-        : FirebaseAuth.instance.currentUser?.email ?? '';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -39,11 +38,18 @@ class MyInfoScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(AppDimensions.paddingXxl),
             children: [
               const SizedBox(height: AppDimensions.paddingXl),
-              _AvatarSection(avatarUrl: profile?.avatarUrl),
+              _AvatarSection(
+                avatarUrl: profile?.avatarUrl,
+                onPickImage: (source) async {
+                  await ref
+                      .read(profileControllerProvider.notifier)
+                      .updateAvatar(source);
+                },
+              ),
               const SizedBox(height: AppDimensions.paddingXxl),
               _InfoCard(
                 profile: profile,
-                email: email,
+                email: '',
                 onEdit: () => _showEditDialog(
                     context, ref, profile?.nickname, profile?.name),
               ),
@@ -62,9 +68,7 @@ class MyInfoScreen extends ConsumerWidget {
   }
 
   Future<void> _logout(BuildContext context) async {
-    if (Firebase.apps.isNotEmpty) {
-      await FirebaseAuth.instance.signOut();
-    }
+    await BackendAuthService.clear();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -170,40 +174,106 @@ class MyInfoScreen extends ConsumerWidget {
 }
 
 class _AvatarSection extends StatelessWidget {
-  const _AvatarSection({this.avatarUrl});
+  const _AvatarSection({this.avatarUrl, required this.onPickImage});
 
   final String? avatarUrl;
+  final void Function(ImageSource) onPickImage;
+
+  ImageProvider? get _imageProvider {
+    if (avatarUrl == null) return null;
+    if (avatarUrl!.startsWith('/')) return FileImage(File(avatarUrl!));
+    return NetworkImage(avatarUrl!);
+  }
+
+  void _showPicker(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppDimensions.radiusXl)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppDimensions.paddingLg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: AppDimensions.paddingLg),
+                decoration: BoxDecoration(
+                  color: AppColors.divider,
+                  borderRadius:
+                      BorderRadius.circular(AppDimensions.radiusPill),
+                ),
+              ),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: AppColors.progressTealLight,
+                  child: Icon(Icons.photo_library_rounded,
+                      color: AppColors.progressTeal),
+                ),
+                title: const Text('앨범에서 선택',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(context);
+                  onPickImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: AppColors.morningBg,
+                  child: Icon(Icons.camera_alt_rounded,
+                      color: AppColors.morningPrimary),
+                ),
+                title: const Text('카메라로 촬영',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(context);
+                  onPickImage(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final image = _imageProvider;
     return Center(
-      child: Stack(
-        children: [
-          CircleAvatar(
-            radius: 52,
-            backgroundColor: AppColors.progressTealLight,
-            backgroundImage:
-                avatarUrl != null ? NetworkImage(avatarUrl!) : null,
-            child: avatarUrl == null
-                ? const Icon(Icons.person_rounded,
-                    size: 52, color: AppColors.progressTeal)
-                : null,
-          ),
-          Positioned(
-            bottom: 0,
-            right: 0,
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                color: AppColors.progressTeal,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.camera_alt_rounded,
-                  size: 18, color: Colors.white),
+      child: GestureDetector(
+        onTap: () => _showPicker(context),
+        child: Stack(
+          children: [
+            CircleAvatar(
+              radius: 52,
+              backgroundColor: AppColors.progressTealLight,
+              backgroundImage: image,
+              child: image == null
+                  ? const Icon(Icons.person_rounded,
+                      size: 52, color: AppColors.progressTeal)
+                  : null,
             ),
-          ),
-        ],
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: AppColors.progressTeal,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.camera_alt_rounded,
+                    size: 18, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

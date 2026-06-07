@@ -1,10 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:uuid/uuid.dart';
 
-import '../models/medicine.dart';
+import '../core/constants.dart';
 import '../models/schedule.dart';
-import 'repository_providers.dart';
+import '../services/backend_auth_service.dart';
 import 'schedule_provider.dart';
 
 part 'saved_medicine_provider.g.dart';
@@ -19,6 +18,8 @@ class SavedMedicine {
     required this.slot,
     required this.doseCount,
     required this.createdAt,
+    this.startDate,
+    this.endDate,
   });
 
   final String id;
@@ -29,6 +30,8 @@ class SavedMedicine {
   final ScheduleSlot slot;
   final int doseCount;
   final DateTime createdAt;
+  final DateTime? startDate;
+  final DateTime? endDate;
 
   static ScheduleSlot _slotFromString(String s) => switch (s) {
         'morning' => ScheduleSlot.morning,
@@ -47,6 +50,12 @@ class SavedMedicine {
         slot: _slotFromString(row['slot'] as String),
         doseCount: (row['dose_count'] as num).toInt(),
         createdAt: row['created_at'] as DateTime,
+        startDate: row['start_date'] != null
+            ? DateTime.tryParse(row['start_date'].toString())
+            : null,
+        endDate: row['end_date'] != null
+            ? DateTime.tryParse(row['end_date'].toString())
+            : null,
       );
 
   String get slotLabel => switch (slot) {
@@ -60,14 +69,29 @@ class SavedMedicine {
 
 @riverpod
 class SavedMedicineController extends _$SavedMedicineController {
-  static final List<SavedMedicine> _savedMedicines = [];
+  Dio get _dio => Dio(BaseOptions(
+        baseUrl: AppConstants.apiBaseUrl,
+        connectTimeout: const Duration(seconds: 6),
+        receiveTimeout: const Duration(seconds: 10),
+      ));
 
   @override
   Future<List<SavedMedicine>> build() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return [];
-    return List.unmodifiable(
-        _savedMedicines..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
+    final options = await BackendAuthService.authOptions();
+    if (options == null) return const [];
+
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/saved-medicines',
+      options: options,
+    );
+    final data = response.data?['data'];
+    if (data is! List) return const [];
+
+    final medicines = data
+        .whereType<Map<String, dynamic>>()
+        .map(_fromJson)
+        .toList(growable: false);
+    return medicines..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
   Future<void> add({
@@ -80,59 +104,71 @@ class SavedMedicineController extends _$SavedMedicineController {
     String frequencyType = 'daily',
     List<int>? daysOfWeek,
     int? intervalDays,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return;
+    final options = await BackendAuthService.authOptions();
+    if (options == null) return;
 
-    const uuid = Uuid();
-    final medicineId = uuid.v4();
-    final scheduledAt = _scheduledAt(slot);
-
-    _savedMedicines.add(SavedMedicine(
-      id: medicineId,
-      medicineName: medicineName,
-      company: company,
-      description: description,
-      imageUrl: imageUrl,
-      slot: slot,
-      doseCount: doseCount,
-      createdAt: DateTime.now(),
-    ));
-
-    await ref.read(scheduleRepositoryProvider).add(Schedule(
-          id: uuid.v4(),
-          medicine: Medicine(
-            id: medicineId,
-            name: medicineName,
-            company: company,
-            description: description,
-            imageUrl: imageUrl,
-          ),
-          scheduledAt: scheduledAt,
-          slot: slot,
-          doseCount: doseCount,
-        ));
+    await _dio.post<Map<String, dynamic>>(
+      '/saved-medicines',
+      data: {
+        'medicineName': medicineName,
+        'company': company,
+        'description': description,
+        'imageUrl': imageUrl,
+        'slot': _slotToString(slot),
+        'doseCount': doseCount,
+        'frequencyType': frequencyType,
+        'daysOfWeek': daysOfWeek,
+        'intervalDays': intervalDays,
+        'startDate': startDate?.toIso8601String(),
+        'endDate': endDate?.toIso8601String(),
+      },
+      options: options,
+    );
 
     ref.invalidateSelf();
     ref.invalidate(todaySchedulesProvider);
   }
 
-  DateTime _scheduledAt(ScheduleSlot slot) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final slotTime = switch (slot) {
-      ScheduleSlot.morning => today.add(const Duration(hours: 8)),
-      ScheduleSlot.lunch => today.add(const Duration(hours: 12)),
-      ScheduleSlot.evening => today.add(const Duration(hours: 18)),
-      ScheduleSlot.bedtime => today.add(const Duration(hours: 21)),
-      ScheduleSlot.custom => today.add(const Duration(hours: 9)),
-    };
-    // 슬롯 시간이 이미 지났으면 현재 시간으로 — 과거 시간 저장 시 DB에서 복용완료 처리되는 문제 방지
-    return slotTime.isBefore(now) ? now : slotTime;
-  }
-
   Future<void> remove(String id) async {
-    _savedMedicines.removeWhere((medicine) => medicine.id == id);
+    final options = await BackendAuthService.authOptions();
+    if (options == null) return;
+    await _dio.delete('/saved-medicines/$id', options: options);
     ref.invalidateSelf();
   }
+
+  SavedMedicine _fromJson(Map<String, dynamic> row) {
+    final createdAt = DateTime.tryParse(row['created_at']?.toString() ?? '') ??
+        DateTime.tryParse(row['createdAt']?.toString() ?? '') ??
+        DateTime.now();
+
+    return SavedMedicine(
+      id: row['id']?.toString() ?? '',
+      medicineName:
+          row['medicine_name']?.toString() ?? row['medicineName']?.toString() ?? '',
+      company: row['company']?.toString(),
+      description: row['description']?.toString(),
+      imageUrl: row['image_url']?.toString() ?? row['imageUrl']?.toString(),
+      slot: SavedMedicine._slotFromString(row['slot']?.toString() ?? 'custom'),
+      doseCount: int.tryParse(row['dose_count']?.toString() ??
+              row['doseCount']?.toString() ??
+              '') ??
+          1,
+      createdAt: createdAt,
+      startDate: DateTime.tryParse(
+          row['start_date']?.toString() ?? row['startDate']?.toString() ?? ''),
+      endDate: DateTime.tryParse(
+          row['end_date']?.toString() ?? row['endDate']?.toString() ?? ''),
+    );
+  }
+
+  String _slotToString(ScheduleSlot slot) => switch (slot) {
+        ScheduleSlot.morning => 'morning',
+        ScheduleSlot.lunch => 'lunch',
+        ScheduleSlot.evening => 'evening',
+        ScheduleSlot.bedtime => 'bedtime',
+        ScheduleSlot.custom => 'custom',
+      };
 }

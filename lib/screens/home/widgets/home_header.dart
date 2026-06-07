@@ -16,17 +16,16 @@ class HomeHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Padding(
-          padding:
-              const EdgeInsets.symmetric(vertical: AppDimensions.paddingXs),
-          child: Transform.translate(
-            offset: Offset(AppResponsive.headerLogoOffset(context), 0),
-            child: Image.asset(
-              _logoPath,
-              width: AppResponsive.logoWidth(context),
-              height: AppResponsive.logoHeight(context),
-              fit: BoxFit.cover,
-              semanticLabel: AppStrings.appName,
+        ExcludeSemantics(
+          child: SizedBox(
+            width: AppResponsive.logoWidth(context),
+            height: AppResponsive.logoHeight(context),
+            child: ClipRect(
+              child: Image.asset(
+                _logoPath,
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+              ),
             ),
           ),
         ),

@@ -23,14 +23,14 @@ class AppResponsive {
 
   static double logoWidth(BuildContext context) {
     final width = screenWidth(context);
-    final reservedForAction = isCompact(context) ? 132.0 : 148.0;
-    final available = (width - reservedForAction).clamp(132.0, 220.0);
+    final reservedForAction = isCompact(context) ? 112.0 : 124.0;
+    final available = (width - reservedForAction).clamp(140.0, 204.0);
 
     return available.toDouble();
   }
 
   static double logoHeight(BuildContext context) =>
-      (logoWidth(context) * 0.2).clamp(32.0, 44.0).toDouble();
+      (logoWidth(context) * 0.22).clamp(30.0, 38.0).toDouble();
 
   static double headerLogoOffset(BuildContext context) =>
       isCompact(context) ? -8 : -14;

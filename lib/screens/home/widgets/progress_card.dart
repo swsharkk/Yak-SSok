@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme.dart';
+import '../../../models/schedule.dart';
+import '../../../core/utils.dart';
 
 class ProgressCard extends StatelessWidget {
   const ProgressCard({
     super.key,
     required this.taken,
     required this.total,
+    this.nextSchedule,
   });
 
   final int taken;
   final int total;
+  final Schedule? nextSchedule;
 
   double get _ratio => total <= 0 ? 0 : (taken / total).clamp(0.0, 1.0);
 
@@ -20,18 +24,20 @@ class ProgressCard extends StatelessWidget {
     return '${total - taken}개 남았어요';
   }
 
+  String get _nextTimeLabel {
+    final next = nextSchedule;
+    if (next == null) return total == 0 ? '일정 없음' : '완료';
+    return AppFormat.timeOfDay12h(next.scheduledAt);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.paddingXl),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1A7F6E), Color(0xFF2DA897)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
-        boxShadow: AppShadows.floating,
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: AppShadows.card,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,23 +50,23 @@ class ProgressCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      '오늘 복약',
+                      '오늘 복약 진행',
                       style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppDimensions.paddingSm),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
                           '$taken',
                           style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 40,
-                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                            fontSize: 46,
+                            fontWeight: FontWeight.w800,
                             height: 1.0,
                           ),
                         ),
@@ -69,9 +75,9 @@ class ProgressCard extends StatelessWidget {
                           child: Text(
                             ' / ',
                             style: TextStyle(
-                              color: Colors.white60,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w400,
+                              color: AppColors.textMuted,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
@@ -80,9 +86,9 @@ class ProgressCard extends StatelessWidget {
                           child: Text(
                             '$total',
                             style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w500,
+                              color: AppColors.textSecondary,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
@@ -92,18 +98,30 @@ class ProgressCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: AppColors.primarySubtle,
                   borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
                 ),
-                child: Text(
-                  taken == total && total > 0 ? '완료 ✓' : '진행 중',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.schedule_rounded,
+                      color: AppColors.progressTealDark,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _nextTimeLabel,
+                      style: const TextStyle(
+                        color: AppColors.progressTealDark,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -113,19 +131,33 @@ class ProgressCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
             child: LinearProgressIndicator(
               value: _ratio,
-              minHeight: AppDimensions.progressBarHeight,
-              backgroundColor: Colors.white.withValues(alpha: 0.25),
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+              minHeight: 10,
+              backgroundColor: AppColors.primaryLight,
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.progressTeal),
             ),
           ),
           const SizedBox(height: AppDimensions.paddingMd),
-          Text(
-            _nextLabel,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
-              fontWeight: FontWeight.w400,
-            ),
+          Row(
+            children: [
+              Text(
+                _nextLabel,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${(_ratio * 100).round()}%',
+                style: const TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ],
       ),

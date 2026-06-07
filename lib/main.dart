@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,12 +10,6 @@ void main() async {
 
   await NotificationService.init();
   await NotificationService.requestPermission();
-
-  try {
-    await Firebase.initializeApp();
-  } catch (e) {
-    debugPrint('Firebase 초기화 실패: $e');
-  }
 
   try {
     await FlutterNaverMap().init(

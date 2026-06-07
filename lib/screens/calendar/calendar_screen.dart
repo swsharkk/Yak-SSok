@@ -15,14 +15,14 @@ class CalendarScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
+      body: const CustomScrollView(
         slivers: [
-          const SliverAppBar(
+          SliverAppBar(
             automaticallyImplyLeading: false,
             backgroundColor: AppColors.background,
             elevation: 0,
             floating: true,
-            snap: true,
+            snap: false,
             scrolledUnderElevation: 0,
             surfaceTintColor: Colors.transparent,
             title: _CalendarAppBar(),
@@ -30,11 +30,13 @@ class CalendarScreen extends ConsumerWidget {
             toolbarHeight: 64,
           ),
           SliverPadding(
-            padding: AppResponsive.pagePadding(
-              context,
-              top: AppDimensions.paddingMd,
+            padding: EdgeInsets.fromLTRB(
+              AppDimensions.paddingLg,
+              AppDimensions.paddingMd,
+              AppDimensions.paddingLg,
+              AppDimensions.padding3xl,
             ),
-            sliver: const SliverToBoxAdapter(
+            sliver: SliverToBoxAdapter(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -64,15 +66,17 @@ class _CalendarAppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Transform.translate(
-          offset: Offset(AppResponsive.headerLogoOffset(context), 0),
-          child: Image.asset(
-            _logoPath,
+        ExcludeSemantics(
+          child: SizedBox(
             width: AppResponsive.logoWidth(context),
             height: AppResponsive.logoHeight(context),
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-            semanticLabel: AppStrings.appName,
+            child: ClipRect(
+              child: Image.asset(
+                _logoPath,
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+              ),
+            ),
           ),
         ),
         const Spacer(),

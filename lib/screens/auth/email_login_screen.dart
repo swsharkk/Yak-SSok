@@ -1,8 +1,8 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
+import '../../services/backend_auth_service.dart';
+import '../main_screen.dart';
 import 'signup_screen.dart';
 import 'widgets/login_button.dart';
 
@@ -29,55 +29,36 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
   }
 
   Future<void> _login() async {
-    if (Firebase.apps.isEmpty) {
-      setState(() {
-        _errorMessage = 'Firebase 설정 파일을 추가한 뒤 다시 실행해주세요.';
-      });
-      return;
-    }
-
     setState(() {
       _errorMessage = null;
       _isLoading = true;
     });
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await BackendAuthService.login(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
       if (!mounted) return;
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _errorMessage = _authErrorMessage(e);
-      });
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainScreen()),
+        (_) => false,
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = '로그인 실패: $e';
+        _errorMessage = _backendErrorMessage(e);
       });
     }
   }
 
-  String _authErrorMessage(FirebaseAuthException e) {
-    final detail = e.message ?? e.code;
-    return switch (e.code) {
-      'invalid-email' => '이메일 형식을 확인해주세요.',
-      'user-not-found' ||
-      'wrong-password' ||
-      'invalid-credential' =>
-        AppStrings.loginFailedMessage,
-      'operation-not-allowed' =>
-        'Firebase Console에서 Email/Password 로그인을 활성화해주세요. (${e.code})',
-      'configuration-not-found' ||
-      'internal-error' =>
-        'Firebase Authentication 설정을 확인해주세요. (${e.code}: $detail)',
-      _ => '로그인 실패: ${e.code} - $detail',
-    };
+  String _backendErrorMessage(Object e) {
+    final message = e.toString().replaceFirst('Exception: ', '');
+    if (message.contains('401') || message.contains('비밀번호')) {
+      return AppStrings.loginFailedMessage;
+    }
+    return '백엔드 로그인 실패: $message';
   }
 
   @override

@@ -24,7 +24,7 @@ final myMedicinesProvider = AutoDisposeFutureProvider<List<Medicine>>.internal(
 typedef MyMedicinesRef = AutoDisposeFutureProviderRef<List<Medicine>>;
 String _$medicineSearchHash() => r'fd419d197277e6611bdc9b86b54be65fc2793b11';
 
-/// 약 검색.
+/// 약 검색 (drug_interactions 테이블 기반).
 ///
 /// Copied from [MedicineSearch].
 @ProviderFor(MedicineSearch)

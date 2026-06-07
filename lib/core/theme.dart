@@ -4,9 +4,9 @@ class AppColors {
   AppColors._();
 
   // ── Primary (Deep Teal) ──────────────────────────────────────────────────
-  static const Color primary        = Color(0xFF1A7F6E);
-  static const Color primaryMedium  = Color(0xFF4DA896);
-  static const Color primaryLight   = Color(0xFFE8F5F2);
+  static const Color primary        = Color(0xFF14B8A6);
+  static const Color primaryMedium  = Color(0xFF2DD4BF);
+  static const Color primaryLight   = Color(0xFFCCFBF1);
 
   // ── Neutral ──────────────────────────────────────────────────────────────
   static const Color background     = Color(0xFFF2F2F7);
@@ -43,10 +43,13 @@ class AppColors {
   static const Color brandRed         = Color(0xFFFF3B30);
   static const Color brandRedSoft     = Color(0xFFFFEBEB);
 
+  // ── Primary extras ───────────────────────────────────────────────────────
+  static const Color primarySubtle  = Color(0xFFF0FDFA);
+
   // ── Progress (backward compat) ───────────────────────────────────────────
-  static const Color progressTeal      = Color(0xFF1A7F6E);
-  static const Color progressTealDark  = Color(0xFF155F52);
-  static const Color progressTealLight = Color(0xFFE8F5F2);
+  static const Color progressTeal      = Color(0xFF14B8A6);
+  static const Color progressTealDark  = Color(0xFF0D9488);
+  static const Color progressTealLight = Color(0xFFCCFBF1);
 
   // ── Legacy slot (backward compat) ────────────────────────────────────────
   static const Color morningBg           = Color(0xFFEBF4FF);
@@ -107,7 +110,7 @@ class AppShadows {
 
   static const List<BoxShadow> floating = [
     BoxShadow(
-      color: Color(0x401A7F6E),
+      color: Color(0x3314B8A6),
       blurRadius: 20,
       offset: Offset(0, 8),
     ),
@@ -123,7 +126,7 @@ class AppShadows {
 
   static const List<BoxShadow> button = [
     BoxShadow(
-      color: Color(0x301A7F6E),
+      color: Color(0x2814B8A6),
       blurRadius: 12,
       offset: Offset(0, 4),
     ),
@@ -153,7 +156,8 @@ class AppDimensions {
   static const double iconXl = 32;
 
   static const double cardPadding          = 16;
-  static const double medicineThumbSize    = 48;
+  static const double medicineThumbSize    = 40;
+  static const double medicineCardHeight   = 72;
   static const double progressBarHeight    = 6;
   static const double emergencyButtonHeight = 36;
   static const double bottomNavHeight      = 64;

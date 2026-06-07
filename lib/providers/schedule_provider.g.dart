@@ -6,7 +6,7 @@ part of 'schedule_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$todaySchedulesHash() => r'ead84a5b4688cb844f34146625bb087c11c1c8d3';
+String _$todaySchedulesHash() => r'cca2643ed7065ff1e29fc3b4976b1e3b54a5eb01';
 
 /// 오늘의 복약 일정.
 ///

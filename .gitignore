@@ -50,6 +50,8 @@ build/
 **/ios/Flutter/flutter_assets/
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/ServiceDefinitions.json
+Back-end/*.json
+.venv/
 **/ios/Runner/GeneratedPluginRegistrant.*
 
 # macOS

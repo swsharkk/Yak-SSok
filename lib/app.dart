@@ -1,5 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,7 +6,9 @@ import 'core/theme.dart';
 import 'models/adaptive_ui_settings.dart';
 import 'providers/adaptive_ui_provider.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/guardian/guardian_main_screen.dart';
 import 'screens/main_screen.dart';
+import 'services/backend_auth_service.dart';
 import 'services/behavior_log_service.dart';
 
 class YakssokApp extends ConsumerStatefulWidget {
@@ -54,20 +54,25 @@ class _YakssokAppState extends ConsumerState<YakssokApp> {
 class _AuthGate extends StatelessWidget {
   const _AuthGate();
 
+  static Future<String?> _resolveRoute() async {
+    final hasSession = await BackendAuthService.hasSession();
+    if (!hasSession) return null;
+    return BackendAuthService.currentRole();
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (Firebase.apps.isEmpty) return const LoginScreen();
-
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+    return FutureBuilder<String?>(
+      future: _resolveRoute(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        final user = snapshot.data ?? FirebaseAuth.instance.currentUser;
-        if (user != null) return const MainScreen();
+        final role = snapshot.data;
+        if (role == 'guardian') return const GuardianMainScreen();
+        if (role == 'elder') return const MainScreen();
         return const LoginScreen();
       },
     );

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../models/schedule.dart';
@@ -12,14 +13,39 @@ class TodaySchedules extends _$TodaySchedules {
   @override
   Future<List<Schedule>> build() async {
     final repo = ref.watch(scheduleRepositoryProvider);
-    final schedules = await repo.getSchedulesByDate(DateTime.now());
-    await NotificationService.scheduleForAll(schedules);
+    List<Schedule> schedules;
+    try {
+      schedules = await repo.getSchedulesByDate(DateTime.now());
+    } catch (e) {
+      debugPrint('[TodaySchedules] 로드 실패: $e');
+      return [];
+    }
+    // 알림 예약 실패가 일정 로드를 막지 않도록 분리
+    NotificationService.scheduleForAll(schedules).catchError(
+      (e) => debugPrint('[Notification] 예약 실패: $e'),
+    );
     return schedules;
   }
 
   Future<void> markTaken(String id) async {
     final repo = ref.read(scheduleRepositoryProvider);
-    await repo.markTaken(id);
+
+    String scheduleId = id;
+    if (id.startsWith('saved:')) {
+      final schedules = state.valueOrNull ?? [];
+      Schedule? target;
+      for (final s in schedules) {
+        if (s.id == id) { target = s; break; }
+      }
+      if (target != null) {
+        final created = await repo.add(target);
+        if (created.id.isNotEmpty && !created.id.startsWith('saved:')) {
+          scheduleId = created.id;
+        }
+      }
+    }
+
+    await repo.markTaken(scheduleId);
     await NotificationService.cancel(id);
     ref.invalidateSelf();
   }

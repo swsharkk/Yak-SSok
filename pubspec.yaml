@@ -28,10 +28,6 @@ dependencies:
   # 로컬 저장
   shared_preferences: ^2.2.3
 
-  # 백엔드
-  firebase_core: ^3.8.0
-  firebase_auth: ^5.3.3
-  cloud_firestore: ^5.5.0
   uuid: ^4.4.0
 
   # UI 기능
@@ -53,6 +49,9 @@ dependencies:
 
   # 건강 데이터 (Apple Health / Google Health Connect)
   health: ^12.2.0
+  home_widget: ^0.9.2
+  image_picker: ^1.2.2
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:

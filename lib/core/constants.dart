@@ -9,10 +9,10 @@ class AppConstants {
   /// 빌드 시 주입: flutter run --dart-define=MOEF_API_KEY=xxx
   static const String moefApiKey = String.fromEnvironment('MOEF_API_KEY');
 
-  /// 백엔드 미정. 추후 REST 서버 URL이 확정되면 주입.
+  /// 백엔드 REST 서버 URL.
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: '',
+    defaultValue: 'http://127.0.0.1:8000',
   );
 
   /// 로그인 연동 전 백엔드 기능 테스트용 uid.

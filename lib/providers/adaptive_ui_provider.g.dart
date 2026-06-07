@@ -7,7 +7,7 @@ part of 'adaptive_ui_provider.dart';
 // **************************************************************************
 
 String _$adaptiveUIControllerHash() =>
-    r'bbb0dcdaa4c632b4fd38eb830e53a6303b288dac';
+    r'75e7849a88e1cd5b84f837503f1a8e245336c326';
 
 /// See also [AdaptiveUIController].
 @ProviderFor(AdaptiveUIController)

@@ -47,79 +47,207 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
     final messagesAsync = ref.watch(chatControllerProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: AppColors.textPrimary),
-          onPressed: () => Navigator.pop(context),
+      backgroundColor: const Color(0xFFF8FAFD),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            stops: [0, 0.58, 1],
+            colors: [
+              Color(0xFFFBFBFD),
+              Color(0xFFFBFBFD),
+              Color(0xFFA9D3F7),
+            ],
+          ),
         ),
-        title: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                color: AppColors.searchChatBg,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.smart_toy_rounded,
-                  color: AppColors.searchChatPrimary, size: 20),
-            ),
-            const SizedBox(width: AppDimensions.paddingMd),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '약쏙 AI 상담',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              const _ChatHeader(),
+              Expanded(
+                child: messagesAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (_, __) => const Center(child: Text('대화를 불러오지 못했어요')),
+                  data: (messages) {
+                    final initialMessage =
+                        messages.where((message) => message.isBot).isEmpty
+                            ? null
+                            : messages.firstWhere((message) => message.isBot);
+                    final chatMessages = initialMessage == null
+                        ? messages
+                        : messages
+                            .where((message) => message.id != initialMessage.id)
+                            .toList();
+
+                    if (chatMessages.isEmpty) {
+                      return _ChatWelcome(
+                        message: initialMessage?.content ??
+                            '안녕하세요! 약쏙 AI 상담사입니다.\n약 복용, 부작용, 약 조합 등 궁금한 점을 질문해 보세요.',
+                      );
+                    }
+
+                    WidgetsBinding.instance
+                        .addPostFrameCallback((_) => _scrollToBottom());
+                    return ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.fromLTRB(
+                        AppDimensions.paddingXl,
+                        AppDimensions.paddingLg,
+                        AppDimensions.paddingXl,
+                        AppDimensions.padding3xl,
+                      ),
+                      itemCount: chatMessages.length,
+                      itemBuilder: (context, index) =>
+                          _ChatBubble(message: chatMessages[index]),
+                    );
+                  },
                 ),
-                Text(
-                  'Firebase 대화 기록',
+              ),
+              _InputBar(
+                controller: _inputController,
+                onSend: _sendMessage,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatHeader extends StatelessWidget {
+  const _ChatHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppDimensions.paddingXl,
+        AppDimensions.paddingLg,
+        AppDimensions.paddingXl,
+        AppDimensions.paddingMd,
+      ),
+      child: Row(
+        children: [
+          _CircleButton(
+            icon: Icons.arrow_back_rounded,
+            onTap: () => Navigator.pop(context),
+          ),
+          const SizedBox(width: AppDimensions.paddingXl),
+          RichText(
+            text: const TextSpan(
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+              ),
+              children: [
+                TextSpan(text: '약쏙 '),
+                TextSpan(
+                  text: 'AI',
                   style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary.withValues(alpha: 0.7),
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
             ),
+          ),
+          const Spacer(),
+        ],
+      ),
+    );
+  }
+}
+
+class _CircleButton extends StatelessWidget {
+  const _CircleButton({
+    required this.icon,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      shape: const CircleBorder(),
+      elevation: 8,
+      shadowColor: Colors.black12,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 58,
+          height: 58,
+          child: Icon(
+            icon,
+            color: AppColors.textPrimary,
+            size: 27,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatWelcome extends StatelessWidget {
+  const _ChatWelcome({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding:
+            const EdgeInsets.symmetric(horizontal: AppDimensions.padding3xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const _SparkIcon(),
+            const SizedBox(height: AppDimensions.paddingXxl),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 25,
+                fontWeight: FontWeight.w800,
+                height: 1.35,
+              ),
+            ),
           ],
         ),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: messagesAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, __) => const Center(child: Text('대화를 불러오지 못했어요')),
-              data: (messages) {
-                WidgetsBinding.instance
-                    .addPostFrameCallback((_) => _scrollToBottom());
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.paddingXl,
-                    vertical: AppDimensions.paddingLg,
-                  ),
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) =>
-                      _ChatBubble(message: messages[index]),
-                );
-              },
-            ),
-          ),
-          _InputBar(
-            controller: _inputController,
-            onSend: _sendMessage,
-          ),
+    );
+  }
+}
+
+class _SparkIcon extends StatelessWidget {
+  const _SparkIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      shaderCallback: (bounds) => const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFFFF5B5B),
+          Color(0xFFF7C84B),
+          Color(0xFF35C971),
+          Color(0xFF4A7BFF),
         ],
+      ).createShader(bounds),
+      child: const Icon(
+        Icons.auto_awesome_rounded,
+        size: 48,
+        color: Colors.white,
       ),
     );
   }
@@ -140,19 +268,6 @@ class _ChatBubble extends StatelessWidget {
         mainAxisAlignment:
             isBot ? MainAxisAlignment.start : MainAxisAlignment.end,
         children: [
-          if (isBot) ...[
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                color: AppColors.searchChatBg,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.smart_toy_rounded,
-                  color: AppColors.searchChatPrimary, size: 18),
-            ),
-            const SizedBox(width: AppDimensions.paddingSm),
-          ],
           Flexible(
             child: Column(
               crossAxisAlignment:
@@ -164,8 +279,7 @@ class _ChatBubble extends StatelessWidget {
                     vertical: AppDimensions.paddingMd,
                   ),
                   decoration: BoxDecoration(
-                    color:
-                        isBot ? AppColors.surface : AppColors.searchChatPrimary,
+                    color: isBot ? AppColors.surface : const Color(0xFF1F7AE0),
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(AppDimensions.radiusXl),
                       topRight: const Radius.circular(AppDimensions.radiusXl),
@@ -221,64 +335,76 @@ class _InputBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
-    return Container(
+    return Padding(
       padding: EdgeInsets.fromLTRB(
         AppDimensions.paddingXl,
-        AppDimensions.paddingMd,
-        AppDimensions.paddingMd,
-        AppDimensions.paddingMd + bottom,
-      ),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(
-          top: BorderSide(color: Color(0xFFEEEEEE)),
-        ),
+        AppDimensions.paddingLg,
+        AppDimensions.paddingXl,
+        AppDimensions.paddingXl + bottom,
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                style:
-                    const TextStyle(fontSize: 14, color: AppColors.textPrimary),
-                decoration: InputDecoration(
-                  hintText: '약에 대해 무엇이든 물어보세요...',
-                  hintStyle: const TextStyle(
-                      color: AppColors.textSecondary, fontSize: 14),
-                  filled: true,
-                  fillColor: AppColors.background,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.paddingLg,
-                    vertical: AppDimensions.paddingMd,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppDimensions.radiusPill),
-                    borderSide: BorderSide.none,
+        child: Material(
+          color: AppColors.surface.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppDimensions.paddingMd,
+              AppDimensions.paddingSm,
+              AppDimensions.paddingSm,
+              AppDimensions.paddingSm,
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.add_rounded,
+                  color: AppColors.textPrimary,
+                  size: 34,
+                ),
+                const SizedBox(width: AppDimensions.paddingSm),
+                Expanded(
+                  child: TextField(
+                    controller: controller,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    decoration: const InputDecoration(
+                      hintText: '약쏙 AI에게 물어보세요',
+                      hintStyle: TextStyle(
+                        color: Color(0xFF8E949B),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      isCollapsed: true,
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    maxLines: null,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => onSend(),
                   ),
                 ),
-                maxLines: null,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => onSend(),
-              ),
-            ),
-            const SizedBox(width: AppDimensions.paddingSm),
-            GestureDetector(
-              onTap: onSend,
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: const BoxDecoration(
-                  color: AppColors.searchChatPrimary,
-                  shape: BoxShape.circle,
+                GestureDetector(
+                  onTap: onSend,
+                  child: Container(
+                    width: 54,
+                    height: 54,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1F7AE0),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.arrow_upward_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
                 ),
-                child: const Icon(Icons.send_rounded,
-                    color: Colors.white, size: 20),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

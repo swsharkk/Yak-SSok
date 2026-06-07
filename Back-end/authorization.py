@@ -1,9 +1,14 @@
 import hashlib
 import random
 import string
+import uuid
 from firebase_admin import firestore
 import jwt
 from datetime import datetime, timedelta
+from typing import Optional
+import requests
+from google.auth.transport.requests import Request
+from google.oauth2 import service_account
 
 # Firestore 데이터베이스 클라이언트 초기화
 db = firestore.client()
@@ -13,6 +18,183 @@ JWT_SECRET_KEY = "yakssok_capstone_secret_master_key_key_key"  # 상용 배포 �
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_WEEKS = 2
+SERVICE_ACCOUNT_FILE = "yakssok-backend-firebase-adminsdk-fbsvc-15c58432ef.json"
+FIRESTORE_PROJECT_ID = "yakssok-backend"
+FIRESTORE_BASE_URL = (
+    f"https://firestore.googleapis.com/v1/projects/{FIRESTORE_PROJECT_ID}"
+    "/databases/(default)/documents"
+)
+_rest_credentials = None
+
+
+def _rest_headers():
+    global _rest_credentials
+    if _rest_credentials is None:
+        _rest_credentials = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_FILE,
+            scopes=["https://www.googleapis.com/auth/datastore"],
+        )
+    if not _rest_credentials.valid:
+        _rest_credentials.refresh(Request())
+    return {"Authorization": f"Bearer {_rest_credentials.token}"}
+
+
+def _to_firestore_value(value):
+    if value is None:
+        return {"nullValue": None}
+    if isinstance(value, bool):
+        return {"booleanValue": value}
+    if isinstance(value, int):
+        return {"integerValue": str(value)}
+    return {"stringValue": str(value)}
+
+
+def _to_firestore_fields(data):
+    return {key: _to_firestore_value(value) for key, value in data.items()}
+
+
+def _from_firestore_fields(fields):
+    data = {}
+    for key, value in fields.items():
+        if "stringValue" in value:
+            data[key] = value["stringValue"]
+        elif "integerValue" in value:
+            data[key] = int(value["integerValue"])
+        elif "booleanValue" in value:
+            data[key] = value["booleanValue"]
+        elif "nullValue" in value:
+            data[key] = None
+    return data
+
+
+def _find_user_by_email(email):
+    body = {
+        "structuredQuery": {
+            "from": [{"collectionId": "users"}],
+            "where": {
+                "fieldFilter": {
+                    "field": {"fieldPath": "email"},
+                    "op": "EQUAL",
+                    "value": {"stringValue": email},
+                }
+            },
+            "limit": 1,
+        }
+    }
+    response = requests.post(
+        f"{FIRESTORE_BASE_URL}:runQuery",
+        headers=_rest_headers(),
+        json=body,
+        timeout=10,
+    )
+    response.raise_for_status()
+    for item in response.json():
+        document = item.get("document")
+        if document:
+            return _from_firestore_fields(document.get("fields", {}))
+    return None
+
+
+def firestore_create(collection: str, data: dict, document_id: Optional[str] = None) -> dict:
+    if document_id is None:
+        document_id = uuid.uuid4().hex
+    response = requests.post(
+        f"{FIRESTORE_BASE_URL}/{collection}",
+        headers=_rest_headers(),
+        params={"documentId": document_id},
+        json={"fields": _to_firestore_fields(data)},
+        timeout=10,
+    )
+    response.raise_for_status()
+    return {**data, "id": document_id}
+
+
+def firestore_patch(collection: str, document_id: str, data: dict) -> dict:
+    # updateMask 지정해야 기존 필드가 유지됨 (없으면 문서 전체 덮어씌움)
+    params = [("updateMask.fieldPaths", key) for key in data.keys()]
+    response = requests.patch(
+        f"{FIRESTORE_BASE_URL}/{collection}/{document_id}",
+        headers=_rest_headers(),
+        params=params,
+        json={"fields": _to_firestore_fields(data)},
+        timeout=10,
+    )
+    response.raise_for_status()
+    return {**data, "id": document_id}
+
+
+def firestore_delete(collection: str, document_id: str) -> None:
+    response = requests.delete(
+        f"{FIRESTORE_BASE_URL}/{collection}/{document_id}",
+        headers=_rest_headers(),
+        timeout=10,
+    )
+    if response.status_code not in (200, 404):
+        response.raise_for_status()
+
+
+def firestore_get(collection: str, document_id: str) -> Optional[dict]:
+    response = requests.get(
+        f"{FIRESTORE_BASE_URL}/{collection}/{document_id}",
+        headers=_rest_headers(),
+        timeout=10,
+    )
+    if response.status_code == 404:
+        return None
+    response.raise_for_status()
+    data = response.json()
+    fields = data.get("fields", {})
+    if not fields:
+        return None
+    result = _from_firestore_fields(fields)
+    result["id"] = document_id
+    return result
+
+
+def firestore_query(collection: str, field: str, value: str, limit: int = 100) -> list[dict]:
+    body = {
+        "structuredQuery": {
+            "from": [{"collectionId": collection}],
+            "where": {
+                "fieldFilter": {
+                    "field": {"fieldPath": field},
+                    "op": "EQUAL",
+                    "value": {"stringValue": value},
+                }
+            },
+            "limit": limit,
+        }
+    }
+    response = requests.post(
+        f"{FIRESTORE_BASE_URL}:runQuery",
+        headers=_rest_headers(),
+        json=body,
+        timeout=10,
+    )
+    response.raise_for_status()
+    rows = []
+    for item in response.json():
+        document = item.get("document")
+        if not document:
+            continue
+        data = _from_firestore_fields(document.get("fields", {}))
+        data["id"] = document["name"].split("/")[-1]
+        rows.append(data)
+    return rows
+
+def find_elder_by_link_code(code: str) -> Optional[dict]:
+    """link_code로 어르신 계정을 조회합니다."""
+    rows = firestore_query("users", "link_code", code.upper().strip(), limit=1)
+    return rows[0] if rows else None
+
+
+def link_guardian_to_elder(guardian_uid: str, elder_uid: str) -> None:
+    """보호자 계정에 연동된 어르신 uid를 저장합니다."""
+    firestore_patch("users", guardian_uid, {
+        "connected_with": elder_uid,
+        "status": "linked",
+    })
+
 
 def hash_password(password: str):
     """
@@ -27,12 +209,11 @@ def create_user(email, role, nickname, password):
     """
     try:
         # 이메일 중복 체크
-        existing_users = db.collection("users").where("email", "==", email).stream()
-        for _ in existing_users:
+        existing_user = _find_user_by_email(email)
+        if existing_user:
             return {"status": "fail", "message": "이미 존재하는 이메일입니다."}
 
-        user_ref = db.collection("users").document()
-        uid = user_ref.id
+        uid = uuid.uuid4().hex
         
         user_data = {
             "uid": uid,
@@ -49,7 +230,14 @@ def create_user(email, role, nickname, password):
             link_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
             user_data["link_code"] = link_code
             
-        user_ref.set(user_data)
+        response = requests.post(
+            f"{FIRESTORE_BASE_URL}/users",
+            headers=_rest_headers(),
+            params={"documentId": uid},
+            json={"fields": _to_firestore_fields(user_data)},
+            timeout=10,
+        )
+        response.raise_for_status()
         return {"status": "success", "message": "회원가입이 완료되었습니다.", "user": user_data}
         
     except Exception as e:
@@ -62,38 +250,29 @@ def verify_user(email, password):
     보안 인가 처리를 위한 이중 JWT 토큰(Access/Refresh)을 발급하여 반환
     """
     try:
-        users = db.collection("users").where("email", "==", email).stream()
-        user_found = False
-        
-        for user in users:
-            user_found = True
-            data = user.to_dict()
-            
-            # 저장된 해시 비밀번호와 입력된 비밀번호의 해시값 대조 [cite: 4464, 4465]
-            if data["password"] == hash_password(password):
-                
-                # 🔐 [보안 고도화] 로그인 성공 시 이중 JWT 토큰 세션 발행
-                # 7064번 프롬프트에서 정의한 create_tokens 기능을 호출하여 토큰 딕셔너리를 생성
-                tokens = create_tokens(data["uid"], data["role"], data["nickname"])
-                
-                return {
-                    "status": "success",
-                    "message": "로그인 성공 및 보안 인증 토큰 발급 완료",
-                    "tokens": tokens,  # 생성된 access_token과 refresh_token이 프론트로 전달됨
-                    "user_info": {
-                        "uid": data["uid"],
-                        "role": data["role"],
-                        "nickname": data["nickname"]
-                    }
+        data = _find_user_by_email(email)
+        if not data:
+            return {"status": "fail", "message": "존재하지 않는 이메일 계정입니다."}
+
+        # 저장된 해시 비밀번호와 입력된 비밀번호의 해시값 대조
+        if data["password"] == hash_password(password):
+            tokens = create_tokens(data["uid"], data["role"], data["nickname"])
+            return {
+                "status": "success",
+                "message": "로그인 성공 및 보안 인증 토큰 발급 완료",
+                "tokens": tokens,
+                "user_info": {
+                    "uid": data["uid"],
+                    "role": data["role"],
+                    "nickname": data["nickname"],
+                    "name": data.get("name") or data["nickname"],
                 }
-            else:
-                return {"status": "fail", "message": "비밀번호가 일치하지 않습니다."} [cite: 4465]
-                
-        if not user_found:
-            return {"status": "fail", "message": "존재하지 않는 이메일 계정입니다."} [cite: 4465]
+            }
+
+        return {"status": "fail", "message": "비밀번호가 일치하지 않습니다."}
             
     except Exception as e:
-        return {"status": "error", "message": f"로그인 처리 중 오류 발생: {str(e)}"} [cite: 4465]
+        return {"status": "error", "message": f"로그인 처리 중 오류 발생: {str(e)}"}
 
 # 보호자-노인 계정 연동 및 상호 승인 로직
 def request_connection(guardian_uid, target_code):

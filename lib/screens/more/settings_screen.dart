@@ -1,13 +1,13 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/theme.dart';
 import '../../providers/recent_medicine_search_provider.dart';
+import '../../services/backend_auth_service.dart';
+import '../../services/guardian_service.dart';
 import '../auth/login_screen.dart';
-import 'dev_mode_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -29,6 +29,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _easyMode = false;
   bool _dataSave = false;
   bool _loaded = false;
+  bool _isLoggedIn = false;
+  String? _email;
+  String? _role;
 
   @override
   void initState() {
@@ -38,6 +41,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
+    final isLoggedIn = await BackendAuthService.hasSession();
+    final email = await BackendAuthService.currentEmail();
+    final role = await BackendAuthService.currentRole();
     if (!mounted) return;
 
     setState(() {
@@ -46,6 +52,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _vibration = prefs.getBool(_vibrationKey) ?? true;
       _easyMode = prefs.getBool(_easyModeKey) ?? false;
       _dataSave = prefs.getBool(_dataSaveKey) ?? false;
+      _isLoggedIn = isLoggedIn;
+      _email = email;
+      _role = role;
       _loaded = true;
     });
   }
@@ -68,19 +77,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _signOut() async {
-    if (Firebase.apps.isNotEmpty) {
-      await FirebaseAuth.instance.signOut();
-    }
+    await BackendAuthService.clear();
     if (!mounted) return;
-    setState(() {});
+    setState(() {
+      _isLoggedIn = false;
+      _email = null;
+    });
     _showDone('로그아웃됐어요');
   }
 
   @override
   Widget build(BuildContext context) {
-    final isLoggedIn =
-        Firebase.apps.isNotEmpty && FirebaseAuth.instance.currentUser != null;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -96,15 +103,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         children: [
           _AccountHeader(
-            isLoggedIn: isLoggedIn,
+            isLoggedIn: _isLoggedIn,
+            email: _email,
             onTap: () {
-              if (isLoggedIn) return;
+              if (_isLoggedIn) return;
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
               );
             },
           ),
+          if (_role == 'elder') ...[
+            const SizedBox(height: AppDimensions.paddingXxl),
+            const _SectionTitle(label: '보호자 연동'),
+            const SizedBox(height: AppDimensions.paddingMd),
+            _LinkCodeCard(onShow: _showDone),
+          ],
           const SizedBox(height: AppDimensions.paddingXxl),
           const _SectionTitle(label: '알림'),
           const SizedBox(height: AppDimensions.paddingMd),
@@ -171,18 +185,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   _save(_easyModeKey, value);
                 },
               ),
-              const _SettingsDivider(),
-              _NavigationRow(
-                icon: Icons.tune_rounded,
-                iconColor: AppColors.searchRecentBlue,
-                iconBackgroundColor: const Color(0xFFE0F2FE),
-                title: '적응형 UI 레벨',
-                subtitle: 'Level 1, 2, 3 직접 선택',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DevModeScreen()),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: AppDimensions.paddingXxl),
@@ -228,15 +230,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               const _SettingsDivider(),
               _ActionRow(
-                icon: isLoggedIn ? Icons.logout_rounded : Icons.login_rounded,
-                iconColor: isLoggedIn
+                icon: _isLoggedIn ? Icons.logout_rounded : Icons.login_rounded,
+                iconColor: _isLoggedIn
                     ? AppColors.alertPrimary
                     : AppColors.progressTeal,
                 iconBackgroundColor:
-                    isLoggedIn ? AppColors.alertBg : const Color(0xFFE6FAF8),
-                title: isLoggedIn ? '로그아웃' : '로그인',
-                subtitle: isLoggedIn ? '현재 계정에서 나가기' : '계정으로 데이터 이어쓰기',
-                onTap: isLoggedIn
+                    _isLoggedIn ? AppColors.alertBg : const Color(0xFFE6FAF8),
+                title: _isLoggedIn ? '로그아웃' : '로그인',
+                subtitle: _isLoggedIn ? '현재 계정에서 나가기' : '계정으로 데이터 이어쓰기',
+                onTap: _isLoggedIn
                     ? _signOut
                     : () => Navigator.push(
                           context,
@@ -256,18 +258,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 class _AccountHeader extends StatelessWidget {
   const _AccountHeader({
     required this.isLoggedIn,
+    required this.email,
     required this.onTap,
   });
 
   final bool isLoggedIn;
+  final String? email;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final email = Firebase.apps.isNotEmpty
-        ? FirebaseAuth.instance.currentUser?.email
-        : null;
-
     return Material(
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
@@ -394,40 +394,6 @@ class _SwitchRow extends StatelessWidget {
   }
 }
 
-class _NavigationRow extends StatelessWidget {
-  const _NavigationRow({
-    required this.icon,
-    required this.iconColor,
-    required this.iconBackgroundColor,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBackgroundColor;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return _SettingsRowShell(
-      icon: icon,
-      iconColor: iconColor,
-      iconBackgroundColor: iconBackgroundColor,
-      title: title,
-      subtitle: subtitle,
-      trailing: const Icon(
-        Icons.chevron_right_rounded,
-        color: AppColors.textMuted,
-        size: 28,
-      ),
-      onTap: onTap,
-    );
-  }
-}
 
 class _ActionRow extends StatelessWidget {
   const _ActionRow({
@@ -570,6 +536,149 @@ class _SettingsDivider extends StatelessWidget {
       indent: AppDimensions.paddingXl + 44 + AppDimensions.paddingLg,
       endIndent: AppDimensions.paddingXl,
       color: AppColors.divider,
+    );
+  }
+}
+
+class _LinkCodeCard extends StatefulWidget {
+  const _LinkCodeCard({required this.onShow});
+  final void Function(String) onShow;
+
+  @override
+  State<_LinkCodeCard> createState() => _LinkCodeCardState();
+}
+
+class _LinkCodeCardState extends State<_LinkCodeCard> {
+  String? _code;
+  bool _loading = false;
+  bool _revealed = false;
+
+  Future<void> _fetch() async {
+    setState(() => _loading = true);
+    try {
+      final code = await GuardianService.getMyLinkCode();
+      if (mounted) setState(() { _code = code; _revealed = true; _loading = false; });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        widget.onShow('코드를 불러오지 못했습니다.');
+      }
+    }
+  }
+
+  void _copy() {
+    if (_code == null) return;
+    Clipboard.setData(ClipboardData(text: _code!));
+    widget.onShow('인증 코드를 복사했습니다.');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimensions.paddingXl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.progressTealLight,
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                  ),
+                  child: const Icon(Icons.link_rounded,
+                      color: AppColors.progressTeal,
+                      size: AppDimensions.iconLg),
+                ),
+                const SizedBox(width: AppDimensions.paddingLg),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('보호자 인증 코드',
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 3),
+                      const Text(
+                        '보호자 앱 가입 시 이 코드를 입력하면 연동됩니다.',
+                        style: TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppDimensions.paddingLg),
+            if (_revealed && _code != null)
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.paddingLg,
+                          vertical: AppDimensions.paddingMd),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.radiusMd),
+                      ),
+                      child: Text(
+                        _code!,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 6,
+                          color: AppColors.progressTeal,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppDimensions.paddingMd),
+                  IconButton(
+                    onPressed: _copy,
+                    icon: const Icon(Icons.copy_rounded),
+                    color: AppColors.progressTeal,
+                    tooltip: '복사',
+                  ),
+                ],
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _loading ? null : _fetch,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.progressTeal,
+                    disabledBackgroundColor:
+                        AppColors.progressTeal.withValues(alpha: 0.4),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppDimensions.radiusPill),
+                    ),
+                  ),
+                  child: _loading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2.5),
+                        )
+                      : const Text('인증 코드 확인',
+                          style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

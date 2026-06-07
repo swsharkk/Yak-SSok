@@ -104,11 +104,22 @@ class _ImageCard extends StatelessWidget {
         children: [
           Center(
             child: imageUrl != null
-                ? ClipRRect(
-                    borderRadius:
-                        BorderRadius.circular(AppDimensions.radiusXl),
-                    child: Image.network(imageUrl!,
-                        height: 140, fit: BoxFit.contain),
+                ? SizedBox(
+                    width: double.infinity,
+                    height: 140,
+                    child: ClipRRect(
+                      borderRadius:
+                          BorderRadius.circular(AppDimensions.radiusXl),
+                      child: Image.network(
+                        imageUrl!,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.medication_rounded,
+                          size: 80,
+                          color: AppColors.progressTeal,
+                        ),
+                      ),
+                    ),
                   )
                 : const Icon(Icons.medication_rounded,
                     size: 80, color: AppColors.progressTeal),

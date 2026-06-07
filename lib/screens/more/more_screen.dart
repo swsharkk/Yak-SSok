@@ -1,17 +1,15 @@
 import 'dart:math';
 
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/responsive.dart';
 import '../../core/theme.dart';
+import '../../services/backend_auth_service.dart';
 
 import '../auth/login_screen.dart';
 import '../my_info/my_info_screen.dart';
 import '../pharmacy/pharmacy_screen.dart';
 import '../saved_medicine/saved_medicine_screen.dart';
-import 'dev_mode_screen.dart';
 import 'health_info_screen.dart';
 import 'settings_screen.dart';
 import 'widgets/more_menu_item.dart';
@@ -32,25 +30,31 @@ class MoreScreen extends StatelessWidget {
             backgroundColor: AppColors.background,
             elevation: 0,
             floating: true,
-            snap: true,
+            snap: false,
             scrolledUnderElevation: 0,
             surfaceTintColor: Colors.transparent,
-            centerTitle: true,
-            title: Builder(
-              builder: (context) => Image.asset(
-                _logoPath,
+            titleSpacing: 0,
+            toolbarHeight: 64,
+            title: ExcludeSemantics(
+              child: SizedBox(
                 width: AppResponsive.logoWidth(context),
                 height: AppResponsive.logoHeight(context),
-                fit: BoxFit.cover,
-                semanticLabel: AppStrings.appName,
+                child: ClipRect(
+                  child: Image.asset(
+                    _logoPath,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.center,
+                  ),
+                ),
               ),
             ),
-            toolbarHeight: 64,
           ),
           SliverPadding(
-            padding: AppResponsive.pagePadding(
-              context,
-              top: AppDimensions.paddingMd,
+            padding: const EdgeInsets.fromLTRB(
+              AppDimensions.paddingLg,
+              AppDimensions.paddingMd,
+              AppDimensions.paddingLg,
+              AppDimensions.padding3xl,
             ),
             sliver: SliverToBoxAdapter(
               child: Column(
@@ -92,9 +96,9 @@ class _MenuCard extends StatelessWidget {
               iconColor: AppColors.progressTeal,
               iconBackgroundColor: const Color(0xFFE6FAF8),
               label: AppStrings.moreSavedMedicine,
-              onTap: () {
-                final isLoggedIn = Firebase.apps.isNotEmpty &&
-                    FirebaseAuth.instance.currentUser != null;
+              onTap: () async {
+                final isLoggedIn = await BackendAuthService.hasSession();
+                if (!context.mounted) return;
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -140,20 +144,10 @@ class _MenuCard extends StatelessWidget {
               iconColor: AppColors.textSecondary,
               iconBackgroundColor: AppColors.background,
               label: AppStrings.moreSettings,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              ),
-            ),
-            MoreMenuItem(
-              icon: Icons.developer_mode_rounded,
-              iconColor: AppColors.calendarAmber,
-              iconBackgroundColor: const Color(0xFFFEF9C3),
-              label: '개발자 모드',
               showDivider: false,
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const DevModeScreen()),
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
               ),
             ),
           ],

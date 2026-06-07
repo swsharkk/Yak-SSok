@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/responsive.dart';
 import '../../core/theme.dart';
+import '../../core/utils.dart';
 import '../../models/schedule.dart';
 import '../../models/adaptive_ui_settings.dart';
 import '../../providers/adaptive_ui_provider.dart';
@@ -29,7 +30,7 @@ class HomeScreen extends ConsumerWidget {
         const AdaptiveUISettings();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF8F9FC),
       body: CustomScrollView(
         slivers: [
           const SliverAppBar(
@@ -37,7 +38,7 @@ class HomeScreen extends ConsumerWidget {
             backgroundColor: AppColors.background,
             elevation: 0,
             floating: true,
-            snap: true,
+            snap: false,
             scrolledUnderElevation: 0,
             surfaceTintColor: Colors.transparent,
             title: HomeHeader(),
@@ -50,27 +51,30 @@ class HomeScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const _Greeting(),
-                  const SizedBox(height: AppDimensions.paddingXl),
-                  // 레벨 3에서는 진행 카드 숨김 — 인지 부하 감소
+                  _NextMedicineSection(
+                    schedules: schedules,
+                    onMarkTaken: (id) =>
+                        ref.read(todaySchedulesProvider.notifier).markTaken(id),
+                  ),
+                  const SizedBox(height: AppDimensions.paddingLg),
                   if (!uiSettings.simplifiedLayout) ...[
-                    _ProgressSection(progress: progress),
-                    const SizedBox(height: AppDimensions.paddingXxl),
+                    _ProgressSection(progress: progress, schedules: schedules),
+                    const SizedBox(height: AppDimensions.paddingLg),
                   ],
                   const SectionHeader(title: AppStrings.todayMedicine),
-                  const SizedBox(height: AppDimensions.paddingLg),
+                  const SizedBox(height: AppDimensions.paddingMd),
                   _MedicineList(
                     schedules: schedules,
                     onMarkTaken: (id) =>
                         ref.read(todaySchedulesProvider.notifier).markTaken(id),
                   ),
-                  // 레벨 3에서는 건강 요약 숨김 — 핵심(복약)에만 집중
                   if (!uiSettings.simplifiedLayout) ...[
                     const SizedBox(height: AppDimensions.paddingXxl),
                     const SectionHeader(title: AppStrings.todayHealthSummary),
                     const SizedBox(height: AppDimensions.paddingLg),
                     const _HealthSection(),
                   ],
+                  const SizedBox(height: AppDimensions.padding3xl),
                 ],
               ),
             ),
@@ -81,42 +85,215 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _Greeting extends StatelessWidget {
-  const _Greeting();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          AppStrings.greetingMorning,
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
-        const SizedBox(height: AppDimensions.paddingXs),
-        Text(
-          AppStrings.greetingDoingWell,
-          style: Theme.of(context).textTheme.displayLarge,
-        ),
-      ],
-    );
-  }
-}
-
 class _ProgressSection extends StatelessWidget {
-  const _ProgressSection({required this.progress});
+  const _ProgressSection({
+    required this.progress,
+    required this.schedules,
+  });
 
   final AsyncValue<({int taken, int total})> progress;
+  final AsyncValue<List<Schedule>> schedules;
 
   @override
   Widget build(BuildContext context) {
     return progress.when(
-      data: (p) => ProgressCard(taken: p.taken, total: p.total),
+      data: (p) => ProgressCard(
+        taken: p.taken,
+        total: p.total,
+        nextSchedule: schedules.valueOrNull == null
+            ? null
+            : _nextSchedule(schedules.valueOrNull!),
+      ),
       loading: () => const SizedBox(
         height: 140,
         child: LoadingIndicator(),
       ),
       error: (e, _) => const _ErrorBox(message: '진행 상황을 불러오지 못했어요'),
+    );
+  }
+}
+
+class _NextMedicineSection extends StatelessWidget {
+  const _NextMedicineSection({
+    required this.schedules,
+    required this.onMarkTaken,
+  });
+
+  final AsyncValue<List<Schedule>> schedules;
+  final Future<void> Function(String id) onMarkTaken;
+
+  @override
+  Widget build(BuildContext context) {
+    return schedules.when(
+      data: (list) {
+        final next = _nextSchedule(list);
+        if (next == null) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SectionHeader(title: '다음 복용'),
+            const SizedBox(height: AppDimensions.paddingMd),
+            _NextMedicineCard(
+              schedule: next,
+              onTake: next.status == ScheduleStatus.taken
+                  ? null
+                  : () => onMarkTaken(next.id),
+            ),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _NextMedicineCard extends StatelessWidget {
+  const _NextMedicineCard({
+    required this.schedule,
+    this.onTake,
+  });
+
+  final Schedule schedule;
+  final VoidCallback? onTake;
+
+  @override
+  Widget build(BuildContext context) {
+    final isMissed = schedule.status == ScheduleStatus.missed;
+    final accent = isMissed ? AppColors.alertPrimary : AppColors.progressTeal;
+
+    return Container(
+      height: 132,
+      padding: const EdgeInsets.all(AppDimensions.paddingXl),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isMissed
+              ? const [
+                  Color(0xFFFFF1F2),
+                  Color(0xFFFFFFFF),
+                ]
+              : const [
+                  Color(0xFFE8FFFB),
+                  Color(0xFFFFFFFF),
+                ],
+        ),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(
+          color: isMissed ? const Color(0xFFFFCDD5) : const Color(0xFFBDEFE7),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1400A99D),
+            blurRadius: 24,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const MedicinePhotoThumbnail(width: 68, height: 58),
+          const SizedBox(width: AppDimensions.paddingLg),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  AppFormat.timeOfDay12h(schedule.scheduledAt),
+                  style: TextStyle(
+                    color: accent,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  schedule.medicine.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _scheduleSubText(schedule),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppDimensions.paddingMd),
+          _NextTakeButton(
+            isTaken: schedule.status == ScheduleStatus.taken,
+            accent: accent,
+            onPressed: onTake,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NextTakeButton extends StatelessWidget {
+  const _NextTakeButton({
+    required this.isTaken,
+    required this.accent,
+    this.onPressed,
+  });
+
+  final bool isTaken;
+  final Color accent;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null && !isTaken;
+
+    return Material(
+      color: enabled ? accent : AppColors.divider,
+      borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
+      elevation: enabled ? 8 : 0,
+      shadowColor: accent.withValues(alpha: 0.24),
+      child: InkWell(
+        onTap: enabled ? onPressed : null,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
+        child: Container(
+          height: 46,
+          padding:
+              const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLg),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isTaken ? Icons.check_rounded : Icons.add_rounded,
+                color: enabled ? Colors.white : AppColors.textMuted,
+                size: 20,
+              ),
+              const SizedBox(width: AppDimensions.paddingXs),
+              Text(
+                isTaken ? '완료' : '복용',
+                style: TextStyle(
+                  color: enabled ? Colors.white : AppColors.textMuted,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -137,13 +314,22 @@ class _MedicineList extends StatelessWidget {
         if (list.isEmpty) {
           return const _EmptyBox(message: '오늘 등록된 약이 없어요');
         }
-        final sorted = [...list]
-          ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+        // 예정(0) → 놓침(1) → 완료(2) 순, 같은 그룹 내에서는 시간순
+        int priority(Schedule s) => switch (s.status) {
+              ScheduleStatus.pending => 0,
+              ScheduleStatus.missed => 1,
+              ScheduleStatus.taken => 2,
+              _ => 0,
+            };
+        final sorted = [...list]..sort((a, b) {
+            final p = priority(a).compareTo(priority(b));
+            return p != 0 ? p : a.scheduledAt.compareTo(b.scheduledAt);
+          });
 
         return Column(
           children: [
             for (var i = 0; i < sorted.length; i++) ...[
-              if (i > 0) const SizedBox(height: AppDimensions.paddingLg),
+              if (i > 0) const SizedBox(height: AppDimensions.paddingMd),
               MedicineCard(
                 schedule: sorted[i],
                 onActionPressed: sorted[i].status == ScheduleStatus.taken
@@ -159,6 +345,34 @@ class _MedicineList extends StatelessWidget {
       error: (e, _) => const _ErrorBox(message: '복약 일정을 불러오지 못했어요'),
     );
   }
+}
+
+Schedule? _nextSchedule(List<Schedule> schedules) {
+  final candidates = schedules
+      .where((schedule) => schedule.status != ScheduleStatus.taken)
+      .toList()
+    ..sort((a, b) {
+      if (a.status == ScheduleStatus.missed &&
+          b.status != ScheduleStatus.missed) {
+        return -1;
+      }
+      if (a.status != ScheduleStatus.missed &&
+          b.status == ScheduleStatus.missed) {
+        return 1;
+      }
+      return a.scheduledAt.compareTo(b.scheduledAt);
+    });
+
+  return candidates.isEmpty ? null : candidates.first;
+}
+
+String _scheduleSubText(Schedule schedule) {
+  final parts = <String>[];
+  if (schedule.doseCount != null) parts.add('${schedule.doseCount}정');
+  if (schedule.medicine.dosage != null) parts.add(schedule.medicine.dosage!);
+  if (schedule.mealRelation != null) parts.add(schedule.mealRelation!);
+  if (parts.isEmpty) return '복용 정보 없음';
+  return parts.join(' · ');
 }
 
 class _HealthSection extends ConsumerWidget {

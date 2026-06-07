@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
+import '../guardian/guardian_login_screen.dart';
 import 'email_login_screen.dart';
 import 'widgets/login_button.dart';
 
@@ -100,6 +101,33 @@ class _LoginButtons extends StatelessWidget {
         _ImageLoginButton(
           assetPath: 'assets/naver_login_btn.png',
           onTap: () => _showComingSoon(context),
+        ),
+        const SizedBox(height: AppDimensions.paddingXl),
+        const Row(
+          children: [
+            Expanded(child: Divider(color: AppColors.divider)),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                  horizontal: AppDimensions.paddingMd),
+              child: Text(
+                '보호자이신가요?',
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+              ),
+            ),
+            Expanded(child: Divider(color: AppColors.divider)),
+          ],
+        ),
+        const SizedBox(height: AppDimensions.paddingMd),
+        LoginButton(
+          label: '보호자 로그인',
+          backgroundColor: Colors.white,
+          foregroundColor: AppColors.progressTeal,
+          borderColor: AppColors.progressTeal,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const GuardianLoginScreen()),
+          ),
         ),
       ],
     );

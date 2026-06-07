@@ -9,6 +9,7 @@ import '../../models/medicine.dart';
 import '../../providers/medicine_provider.dart';
 import '../../providers/recent_medicine_search_provider.dart';
 import '../../widgets/emergency_button.dart';
+import '../home/widgets/add_medicine_sheet.dart';
 import '../medicine_detail/medicine_detail_screen.dart';
 import 'camera_screen.dart';
 import 'chatbot_screen.dart';
@@ -20,16 +21,16 @@ class SearchScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return const Scaffold(
+      backgroundColor: Color(0xFFF8F9FC),
       body: CustomScrollView(
         slivers: [
-          const SliverAppBar(
+          SliverAppBar(
             automaticallyImplyLeading: false,
-            backgroundColor: AppColors.background,
+            backgroundColor: Color(0xFFF8F9FC),
             elevation: 0,
             floating: true,
-            snap: true,
+            snap: false,
             scrolledUnderElevation: 0,
             surfaceTintColor: Colors.transparent,
             title: _SearchHeader(),
@@ -37,22 +38,58 @@ class SearchScreen extends StatelessWidget {
             toolbarHeight: 64,
           ),
           SliverPadding(
-            padding: AppResponsive.pagePadding(context),
-            sliver: const SliverToBoxAdapter(
+            padding: EdgeInsets.fromLTRB(
+              AppDimensions.paddingLg,
+              AppDimensions.paddingMd,
+              AppDimensions.paddingLg,
+              0,
+            ),
+            sliver: SliverToBoxAdapter(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _SearchTitle(),
-                  SizedBox(height: AppDimensions.paddingXl),
                   _TextSearchSection(),
-                  SizedBox(height: AppDimensions.paddingXxl),
-                  _SearchMethodGrid(),
-                  SizedBox(height: AppDimensions.paddingXxl),
-                  _RecentSearchSection(),
                 ],
               ),
             ),
           ),
+          SliverToBoxAdapter(
+            child: SizedBox(height: AppDimensions.paddingXl),
+          ),
+          SliverToBoxAdapter(
+            child: _SearchBodyPanel(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SearchBodyPanel extends StatelessWidget {
+  const _SearchBodyPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        AppDimensions.paddingLg,
+        AppDimensions.paddingXxl,
+        AppDimensions.paddingLg,
+        AppDimensions.padding3xl,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(34),
+        ),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _SearchMethodGrid(),
+          SizedBox(height: AppDimensions.paddingXxl),
+          _RecentSearchSection(),
         ],
       ),
     );
@@ -97,41 +134,71 @@ class _TextSearchSectionState extends ConsumerState<_TextSearchSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TextField(
-          controller: _controller,
-          onChanged: _onQueryChanged,
-          textInputAction: TextInputAction.search,
-          onSubmitted: (value) {
-            _debounce?.cancel();
-            ref.read(medicineSearchProvider.notifier).search(value);
-          },
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.surface,
-            hintText: '약 이름을 검색해보세요',
-            prefixIcon: const Icon(
-              Icons.search_rounded,
-              color: AppColors.textSecondary,
+        Container(
+          padding: const EdgeInsets.all(1.6),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [
+                Color(0xFF78D7FF),
+                Color(0xFF4DA3FF),
+                Color(0xFFE45BDF),
+                Color(0xFFFF8D8D),
+              ],
             ),
-            suffixIcon: query.isEmpty
-                ? null
-                : IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    color: AppColors.textSecondary,
-                    onPressed: () {
-                      _debounce?.cancel();
-                      _controller.clear();
-                      ref.read(medicineSearchProvider.notifier).search('');
-                      setState(() {});
-                    },
-                  ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
-              borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(26),
             ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppDimensions.paddingLg,
-              vertical: AppDimensions.paddingLg,
+            child: TextField(
+              controller: _controller,
+              onChanged: _onQueryChanged,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (value) {
+                _debounce?.cancel();
+                ref.read(medicineSearchProvider.notifier).search(value);
+              },
+              decoration: InputDecoration(
+                hintText: '약 이름을 검색해보세요',
+                hintStyle: const TextStyle(
+                  color: Color(0xFFB8BBC2),
+                  fontWeight: FontWeight.w500,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: AppColors.textSecondary,
+                ),
+                suffixIcon: query.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        color: AppColors.textSecondary,
+                        onPressed: () {
+                          _debounce?.cancel();
+                          _controller.clear();
+                          ref.read(medicineSearchProvider.notifier).search('');
+                          setState(() {});
+                        },
+                      ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(26),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(26),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(26),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.paddingLg,
+                  vertical: AppDimensions.paddingLg,
+                ),
+              ),
             ),
           ),
         ),
@@ -279,49 +346,22 @@ class _SearchHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Transform.translate(
-          offset: Offset(AppResponsive.headerLogoOffset(context), 0),
-          child: Image.asset(
-            _logoPath,
+        ExcludeSemantics(
+          child: SizedBox(
             width: AppResponsive.logoWidth(context),
             height: AppResponsive.logoHeight(context),
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-            semanticLabel: AppStrings.appName,
+            child: ClipRect(
+              child: Image.asset(
+                _logoPath,
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+              ),
+            ),
           ),
         ),
         const Spacer(),
         const EmergencyButton(),
         const SizedBox(width: AppDimensions.paddingMd),
-      ],
-    );
-  }
-}
-
-class _SearchTitle extends StatelessWidget {
-  const _SearchTitle();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          AppStrings.searchTitle,
-          style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                fontSize: 34,
-                fontWeight: FontWeight.w500,
-                height: 1.2,
-              ),
-        ),
-        const SizedBox(height: AppDimensions.paddingSm),
-        Text(
-          AppStrings.searchSubtitle,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.w500,
-              ),
-        ),
       ],
     );
   }
@@ -334,7 +374,6 @@ class _SearchMethodGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // 상단: 음성 + 카메라 (동일 크기 2열)
         IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -347,8 +386,12 @@ class _SearchMethodGrid extends StatelessWidget {
                   icon: Icons.mic_rounded,
                   title: '음성 검색',
                   description: '말씀만 하시면\n찾아드려요',
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const VoiceSearchScreen())),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const VoiceSearchScreen(),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: AppDimensions.paddingMd),
@@ -360,15 +403,25 @@ class _SearchMethodGrid extends StatelessWidget {
                   icon: Icons.camera_alt_rounded,
                   title: '카메라 촬영',
                   description: '사진으로\n확인',
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const CameraScreen())),
+                  onTap: () async {
+                    final drugs = await Navigator.push<List<ParsedDrug>>(
+                      context,
+                      MaterialPageRoute(builder: (_) => const CameraScreen()),
+                    );
+                    if (drugs == null || drugs.isEmpty || !context.mounted) return;
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => _ParsedDrugSheet(drugs: drugs),
+                    );
+                  },
                 ),
               ),
             ],
           ),
         ),
         const SizedBox(height: AppDimensions.paddingMd),
-        // 하단: 챗봇 (1열 와이드)
         _SearchMethodCard(
           backgroundColor: AppColors.searchChatBg,
           iconBackgroundColor: AppColors.searchChatIconBg,
@@ -377,8 +430,10 @@ class _SearchMethodGrid extends StatelessWidget {
           title: 'AI 챗봇 상담',
           description: '약에 대해 무엇이든 물어보세요',
           isWide: true,
-          onTap: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const ChatbotScreen())),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ChatbotScreen()),
+          ),
         ),
       ],
     );
@@ -424,7 +479,8 @@ class _SearchMethodCard extends StatelessWidget {
                       height: 44,
                       decoration: BoxDecoration(
                         color: iconBackgroundColor,
-                        borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.radiusMd),
                       ),
                       child: Icon(icon, color: foregroundColor, size: 22),
                     ),
@@ -467,7 +523,8 @@ class _SearchMethodCard extends StatelessWidget {
                       height: 44,
                       decoration: BoxDecoration(
                         color: iconBackgroundColor,
-                        borderRadius: BorderRadius.circular(AppDimensions.radiusMd),
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.radiusMd),
                       ),
                       child: Icon(icon, color: foregroundColor, size: 22),
                     ),
@@ -514,8 +571,8 @@ class _RecentSearchSection extends ConsumerWidget {
               child: Text(
                 AppStrings.recentSearchMedicine,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontSize: 25,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
                     ),
               ),
             ),
@@ -538,7 +595,7 @@ class _RecentSearchSection extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: AppDimensions.paddingXl),
+        const SizedBox(height: AppDimensions.paddingLg),
         recentState.when(
           data: (items) {
             if (items.isEmpty) {
@@ -551,7 +608,6 @@ class _RecentSearchSection extends ConsumerWidget {
                   if (i > 0) const SizedBox(height: AppDimensions.paddingLg),
                   _RecentMedicineCard(
                     item: items[i],
-                    accentColor: _recentAccentColor(i),
                   ),
                 ],
               ],
@@ -570,80 +626,74 @@ class _RecentSearchSection extends ConsumerWidget {
 class _RecentMedicineCard extends ConsumerWidget {
   const _RecentMedicineCard({
     required this.item,
-    required this.accentColor,
   });
 
   final RecentMedicineSearch item;
-  final Color accentColor;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final medicine = item.medicine;
 
+    final borderRadius = BorderRadius.circular(28);
+
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
+      shape: RoundedRectangleBorder(
+        borderRadius: borderRadius,
+        side: const BorderSide(color: Color(0xFFECEEF3)),
+      ),
       child: InkWell(
         onTap: () => _openMedicineDetail(context, ref, medicine),
-        borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
+        customBorder: RoundedRectangleBorder(borderRadius: borderRadius),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(
-            AppDimensions.paddingXxl,
-            AppDimensions.paddingXl,
             AppDimensions.paddingLg,
-            AppDimensions.paddingXl,
+            AppDimensions.paddingLg,
+            AppDimensions.paddingLg,
+            AppDimensions.paddingLg,
           ),
           child: Row(
             children: [
               Container(
-                width: 12,
+                width: 64,
                 height: 64,
-                decoration: BoxDecoration(
-                  color: accentColor,
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF4F5F7),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.medication_rounded,
+                  color: AppColors.textPrimary,
+                  size: 30,
                 ),
               ),
-              const SizedBox(width: AppDimensions.paddingXxl),
+              const SizedBox(width: AppDimensions.paddingLg),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
+                      _formatDate(item.searchedAt),
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: AppDimensions.paddingXs),
+                    Text(
                       medicine.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
-                            height: 1.25,
-                          ),
-                    ),
-                    if (medicine.dosage != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        medicine.dosage!,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontSize: 23,
-                              fontWeight: FontWeight.w800,
-                              height: 1.2,
-                            ),
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        height: 1.25,
                       ),
-                    ],
-                    const SizedBox(height: AppDimensions.paddingXs),
-                    Text(
-                      '${AppStrings.searchedAt}: ${_formatDate(item.searchedAt)}',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
                     ),
                   ],
                 ),
-              ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.searchChevron,
-                size: 44,
               ),
             ],
           ),
@@ -669,20 +719,149 @@ Future<void> _openMedicineDetail(
   );
 }
 
-Color _recentAccentColor(int index) {
-  const colors = [
-    AppColors.searchRecentGreen,
-    AppColors.searchRecentBlue,
-    AppColors.searchRecentRed,
-  ];
-
-  return colors[index % colors.length];
-}
-
 String _formatDate(DateTime dateTime) {
   final local = dateTime.toLocal();
   final month = local.month.toString().padLeft(2, '0');
   final day = local.day.toString().padLeft(2, '0');
 
   return '${local.year}.$month.$day';
+}
+
+class _ParsedDrugSheet extends StatelessWidget {
+  const _ParsedDrugSheet({required this.drugs});
+  final List<ParsedDrug> drugs;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        AppDimensions.paddingXl,
+        AppDimensions.paddingLg,
+        AppDimensions.paddingXl,
+        AppDimensions.padding3xl + bottomInset,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.divider,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppDimensions.paddingLg),
+          Text(
+            '인식된 약 목록',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: AppDimensions.paddingXs),
+          Text(
+            '추가할 약을 선택하세요',
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: AppDimensions.paddingLg),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.5,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final drug in drugs) ...[
+                    _DrugResultTile(drug: drug),
+                    const SizedBox(height: AppDimensions.paddingMd),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DrugResultTile extends StatelessWidget {
+  const _DrugResultTile({required this.drug});
+  final ParsedDrug drug;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.paddingLg),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  drug.name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '하루 ${drug.dailyFrequency}회'
+                  '${drug.durationDays > 0 ? ' · ${drug.durationDays}일치' : ''}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => AddMedicineSheet(prefillName: drug.name),
+              );
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: AppColors.progressTeal,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppDimensions.paddingLg,
+                vertical: AppDimensions.paddingSm,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
+              ),
+            ),
+            child: const Text('추가', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
 }

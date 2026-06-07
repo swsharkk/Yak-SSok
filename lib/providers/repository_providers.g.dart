@@ -6,7 +6,7 @@ part of 'repository_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$authRepositoryHash() => r'2775a71c78125c05821c4033119fd1fbc8b371c9';
+String _$authRepositoryHash() => r'1e181c4d6647b5dd800410a0175896051f7dfa9a';
 
 /// See also [authRepository].
 @ProviderFor(authRepository)
@@ -22,7 +22,7 @@ final authRepositoryProvider = Provider<AuthRepository>.internal(
 
 typedef AuthRepositoryRef = ProviderRef<AuthRepository>;
 String _$medicineRepositoryHash() =>
-    r'cf108d44d300c159ae16be0b3cd9fc91f82dbb76';
+    r'b186b7bb068f10b54da99d2f521972a5b53a50f6';
 
 /// See also [medicineRepository].
 @ProviderFor(medicineRepository)
@@ -38,7 +38,7 @@ final medicineRepositoryProvider = Provider<MedicineRepository>.internal(
 
 typedef MedicineRepositoryRef = ProviderRef<MedicineRepository>;
 String _$scheduleRepositoryHash() =>
-    r'c086c6dec5f664fcd903d01737d367827473dbe4';
+    r'e517a74169f2aaa0054585ae9bc436d065aa6083';
 
 /// See also [scheduleRepository].
 @ProviderFor(scheduleRepository)
@@ -69,7 +69,7 @@ final healthRepositoryProvider = Provider<HealthRepository>.internal(
 
 typedef HealthRepositoryRef = ProviderRef<HealthRepository>;
 String _$interactionRepositoryHash() =>
-    r'0427083e7203d76a223205fcac4b7b1be9cb7153';
+    r'e57f0dc20fd69ee5f0e40ce7d3567e1e6305884b';
 
 /// See also [interactionRepository].
 @ProviderFor(interactionRepository)
@@ -84,22 +84,5 @@ final interactionRepositoryProvider = Provider<InteractionRepository>.internal(
 );
 
 typedef InteractionRepositoryRef = ProviderRef<InteractionRepository>;
-String _$medicineServiceHash() => r'a2da781ebd1b72110f70c849312f476c1cd364c5';
-
-/// 식약처 API 서비스. 백엔드와 무관하게 항상 사용.
-///
-/// Copied from [medicineService].
-@ProviderFor(medicineService)
-final medicineServiceProvider = Provider<MedicineService>.internal(
-  medicineService,
-  name: r'medicineServiceProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$medicineServiceHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-typedef MedicineServiceRef = ProviderRef<MedicineService>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member

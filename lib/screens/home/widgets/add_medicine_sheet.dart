@@ -9,16 +9,21 @@ import '../../../models/schedule.dart';
 import '../../../providers/medicine_provider.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../providers/saved_medicine_provider.dart';
+import '../../../providers/schedule_provider.dart';
 import '../../warning/warning_screen.dart';
 
 class AddMedicineSheet extends ConsumerStatefulWidget {
-  const AddMedicineSheet({super.key});
+  const AddMedicineSheet({super.key, this.prefillName});
+
+  final String? prefillName;
 
   @override
   ConsumerState<AddMedicineSheet> createState() => _AddMedicineSheetState();
 }
 
 enum _FrequencyType { daily, weekly, interval }
+
+enum _DurationPreset { none, sevenDays, fourteenDays, thirtyDays, custom }
 
 class _AddMedicineSheetState extends ConsumerState<AddMedicineSheet> {
   final _searchController = TextEditingController();
@@ -31,6 +36,46 @@ class _AddMedicineSheetState extends ConsumerState<AddMedicineSheet> {
   final Set<int> _selectedDays = {0, 1, 2, 3, 4, 5, 6}; // 0=월 ~ 6=일
   int _intervalDays = 2;
 
+  _DurationPreset _durationPreset = _DurationPreset.none;
+  DateTime? _customStartDate;
+  DateTime? _customEndDate;
+
+  DateTime get _effectiveStartDate => _customStartDate ?? DateTime.now();
+
+  DateTime? get _effectiveEndDate => switch (_durationPreset) {
+        _DurationPreset.none => null,
+        _DurationPreset.sevenDays =>
+          DateTime.now().add(const Duration(days: 6)),
+        _DurationPreset.fourteenDays =>
+          DateTime.now().add(const Duration(days: 13)),
+        _DurationPreset.thirtyDays =>
+          DateTime.now().add(const Duration(days: 29)),
+        _DurationPreset.custom => _customEndDate,
+      };
+
+  String _formatDate(DateTime d) =>
+      '${d.year}.${d.month.toString().padLeft(2, '0')}.${d.day.toString().padLeft(2, '0')}';
+
+  Future<void> _pickStartDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _customStartDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) setState(() => _customStartDate = picked);
+  }
+
+  Future<void> _pickEndDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _customEndDate ?? (_customStartDate ?? DateTime.now()),
+      firstDate: _customStartDate ?? DateTime.now(),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) setState(() => _customEndDate = picked);
+  }
+
   static const _slots = [
     (slot: ScheduleSlot.morning, label: '아침'),
     (slot: ScheduleSlot.lunch, label: '점심'),
@@ -38,6 +83,17 @@ class _AddMedicineSheetState extends ConsumerState<AddMedicineSheet> {
     (slot: ScheduleSlot.bedtime, label: '취침 전'),
     (slot: ScheduleSlot.custom, label: '직접 설정'),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.prefillName != null && widget.prefillName!.isNotEmpty) {
+      _searchController.text = widget.prefillName!;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(medicineSearchProvider.notifier).search(widget.prefillName!);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -75,12 +131,19 @@ class _AddMedicineSheetState extends ConsumerState<AddMedicineSheet> {
               intervalDays: _frequencyType == _FrequencyType.interval
                   ? _intervalDays
                   : null,
+              startDate: _durationPreset != _DurationPreset.none
+                  ? _effectiveStartDate
+                  : null,
+              endDate: _effectiveEndDate,
             );
       }
 
       final interactions = await ref
           .read(interactionRepositoryProvider)
           .checkInteractions([_selectedMedicine!.name, ...existingNames]);
+
+      // 홈 화면 오늘의 약 목록 즉시 갱신
+      ref.invalidate(todaySchedulesProvider);
 
       if (!mounted) return;
       Navigator.pop(context);
@@ -327,6 +390,69 @@ class _AddMedicineSheetState extends ConsumerState<AddMedicineSheet> {
                       onIncrement: () => setState(() => _doseCount++),
                     ),
                     const SizedBox(height: AppDimensions.paddingXxl),
+                    Text(
+                      '복용 기간',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: AppDimensions.paddingMd),
+                    Wrap(
+                      spacing: AppDimensions.paddingSm,
+                      runSpacing: AppDimensions.paddingSm,
+                      children: [
+                        _SlotChip(
+                          label: '기간 없음',
+                          isSelected:
+                              _durationPreset == _DurationPreset.none,
+                          onTap: () => setState(
+                              () => _durationPreset = _DurationPreset.none),
+                        ),
+                        _SlotChip(
+                          label: '7일',
+                          isSelected:
+                              _durationPreset == _DurationPreset.sevenDays,
+                          onTap: () => setState(() =>
+                              _durationPreset = _DurationPreset.sevenDays),
+                        ),
+                        _SlotChip(
+                          label: '14일',
+                          isSelected:
+                              _durationPreset == _DurationPreset.fourteenDays,
+                          onTap: () => setState(() =>
+                              _durationPreset = _DurationPreset.fourteenDays),
+                        ),
+                        _SlotChip(
+                          label: '30일',
+                          isSelected:
+                              _durationPreset == _DurationPreset.thirtyDays,
+                          onTap: () => setState(() =>
+                              _durationPreset = _DurationPreset.thirtyDays),
+                        ),
+                        _SlotChip(
+                          label: '직접 설정',
+                          isSelected:
+                              _durationPreset == _DurationPreset.custom,
+                          onTap: () => setState(() {
+                            _durationPreset = _DurationPreset.custom;
+                            _customStartDate ??= DateTime.now();
+                          }),
+                        ),
+                      ],
+                    ),
+                    if (_durationPreset != _DurationPreset.none) ...[
+                      const SizedBox(height: AppDimensions.paddingMd),
+                      _DateRangeRow(
+                        startDate: _effectiveStartDate,
+                        endDate: _effectiveEndDate,
+                        isCustom: _durationPreset == _DurationPreset.custom,
+                        onTapStart: _pickStartDate,
+                        onTapEnd: _pickEndDate,
+                        formatDate: _formatDate,
+                      ),
+                    ],
+                    const SizedBox(height: AppDimensions.paddingXxl),
                   ],
                 ),
               ),
@@ -338,29 +464,69 @@ class _AddMedicineSheetState extends ConsumerState<AddMedicineSheet> {
                 AppDimensions.paddingXxl,
                 AppDimensions.paddingXxl,
               ),
-              child: SizedBox(
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: canAdd ? _onAdd : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.progressTeal,
-                    disabledBackgroundColor:
-                        AppColors.progressTeal.withValues(alpha: 0.4),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppDimensions.radiusXl),
-                    ),
-                  ),
-                  child: const Text(
-                    '약 추가하기',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                ),
+              child: _AddButton(
+                onPressed: canAdd ? _onAdd : null,
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AddButton extends StatelessWidget {
+  const _AddButton({required this.onPressed});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      height: 54,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
+        gradient: LinearGradient(
+          colors: enabled
+              ? [AppColors.primaryMedium, AppColors.progressTeal]
+              : [
+                  AppColors.primaryMedium.withValues(alpha: 0.35),
+                  AppColors.progressTeal.withValues(alpha: 0.35),
+                ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        boxShadow: enabled ? AppShadows.button : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
+          splashColor: Colors.white.withValues(alpha: 0.15),
+          highlightColor: Colors.white.withValues(alpha: 0.08),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.medication_rounded,
+                color: Colors.white.withValues(alpha: enabled ? 1.0 : 0.6),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '약 추가하기',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white.withValues(alpha: enabled ? 1.0 : 0.6),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -706,6 +872,100 @@ class _DirectInputCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DateRangeRow extends StatelessWidget {
+  const _DateRangeRow({
+    required this.startDate,
+    required this.endDate,
+    required this.isCustom,
+    required this.onTapStart,
+    required this.onTapEnd,
+    required this.formatDate,
+  });
+
+  final DateTime startDate;
+  final DateTime? endDate;
+  final bool isCustom;
+  final VoidCallback onTapStart;
+  final VoidCallback onTapEnd;
+  final String Function(DateTime) formatDate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusXl),
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDimensions.paddingLg,
+        vertical: AppDimensions.paddingMd,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: isCustom ? onTapStart : null,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '시작일',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    formatDate(startDate),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: isCustom
+                          ? AppColors.progressTeal
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Icon(Icons.arrow_forward_rounded,
+              size: 16, color: AppColors.textMuted),
+          Expanded(
+            child: GestureDetector(
+              onTap: isCustom ? onTapEnd : null,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Text(
+                    '종료일',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    endDate != null ? formatDate(endDate!) : '미설정',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: isCustom
+                          ? AppColors.progressTeal
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

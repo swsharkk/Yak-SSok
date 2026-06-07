@@ -58,7 +58,8 @@ class _MedicineCalendarState extends ConsumerState<MedicineCalendar> {
             onNext: _goNext,
           ),
           const SizedBox(height: AppDimensions.paddingMd),
-          TableCalendar<Schedule>(
+          ExcludeSemantics(
+          child: TableCalendar<Schedule>(
             firstDay: DateTime(2024, 1, 1),
             lastDay: DateTime(2027, 12, 31),
             focusedDay: _focusedDay,
@@ -136,6 +137,7 @@ class _MedicineCalendarState extends ConsumerState<MedicineCalendar> {
               },
             ),
           ),
+          ), // ExcludeSemantics
         ],
       ),
     );

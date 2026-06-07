@@ -10,6 +10,7 @@ class LoginButton extends StatelessWidget {
     required this.foregroundColor,
     required this.onTap,
     this.leading,
+    this.borderColor,
   });
 
   final String label;
@@ -17,6 +18,7 @@ class LoginButton extends StatelessWidget {
   final Color foregroundColor;
   final VoidCallback onTap;
   final Widget? leading;
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +33,9 @@ class LoginButton extends StatelessWidget {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(6),
+            side: borderColor != null
+                ? BorderSide(color: borderColor!, width: 1.5)
+                : BorderSide.none,
           ),
         ),
         child: Row(
