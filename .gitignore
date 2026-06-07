@@ -1,5 +1,6 @@
-# Claude 개인 설정 (git에 올리지 않음)
-CLAUDE.local.md
+# Firebase Key
+yakssok-backend-firebase-adminsdk-fbsvc-15c58432ef.json
+*.json
 
 # 대용량 데이터 파일
 **/*.csv
@@ -58,8 +59,6 @@ build/
 **/ios/Flutter/flutter_assets/
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/ServiceDefinitions.json
-Back-end/*.json
-.venv/
 **/ios/Runner/GeneratedPluginRegistrant.*
 
 # macOS
@@ -78,17 +77,19 @@ lib/generated_plugin_registrant.dart
 .env
 .env.*
 
-# 코드 생성 파일 (팀 합의: 포함)
-# *.g.dart
-# *.freezed.dart
+# Python 환경 및 캐시
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# 운영체제 설정 파일
+.DS_Store
+Thumbs.db
 
 # Flutter 자동 생성 로그
 *.log
 
 # Claude Code
 .claude/
-
-# Claude Code 로컬 전용
 CLAUDE.md
-.env
-__pycache__/

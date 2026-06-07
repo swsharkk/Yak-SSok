@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../guardian_main_screen.dart';
+import 'guardian_login_screen.dart';
 import '../../core/theme.dart';
 import '../guardian/guardian_login_screen.dart';
 import 'email_login_screen.dart';
@@ -93,6 +95,19 @@ class _LoginButtons extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppDimensions.paddingMd),
+
+        LoginButton(
+          label: '보호자 로그인',
+          backgroundColor: const Color(0xFF1A5A96), 
+          foregroundColor: Colors.white,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => GuardianLoginScreen()), // 💡 보호자 로그인 화면으로 이동!
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
         _ImageLoginButton(
           assetPath: 'assets/kakao_login_btn.png',
           onTap: () => _showComingSoon(context),
