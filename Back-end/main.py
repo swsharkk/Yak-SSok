@@ -1,6 +1,7 @@
 import os
 import csv
 import json
+import hashlib
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from google import genai
@@ -455,8 +456,11 @@ def create_saved_medicine(
     request: SavedMedicineRequest,
     current_user: dict = Depends(get_current_user_by_jwt),
 ):
-    saved_id = uuid4().hex
+    # 같은 사용자+약이름이면 동일한 문서 ID로 묶어 중복 저장을 방지(업서트).
+    key = f"{current_user['sub']}:{request.medicineName.strip()}"
+    saved_id = "sm_" + hashlib.sha1(key.encode("utf-8")).hexdigest()
     now = _now_iso()
+    existing = authorization.firestore_get("saved_medicines", saved_id)
     data = {
         "uid": current_user["sub"],
         "medicine_name": request.medicineName,
@@ -468,42 +472,45 @@ def create_saved_medicine(
         "frequency_type": request.frequencyType,
         "days_of_week": ",".join(map(str, request.daysOfWeek or [])),
         "interval_days": request.intervalDays,
-        "created_at": now,
+        # 최초 저장 시각은 유지(재저장해도 목록 순서가 튀지 않게).
+        "created_at": (existing or {}).get("created_at") or now,
     }
-    saved = authorization.firestore_create("saved_medicines", data, saved_id)
+    saved = authorization.firestore_patch("saved_medicines", saved_id, data)
 
-    hour, minute = _slot_time(request.slot)
-    now_kst = datetime.now(KST)
-    scheduled_at = now_kst.replace(
-        hour=hour,
-        minute=minute,
-        second=0,
-        microsecond=0,
-    )
-    # 슬롯 시간이 이미 지났으면 현재 시간으로 설정 (오늘 일정으로 표시)
-    if scheduled_at < now_kst:
-        scheduled_at = now_kst
+    # 최초 저장일 때만 오늘 일정을 생성한다(재저장 시 일정 중복 방지).
+    if existing is None:
+        hour, minute = _slot_time(request.slot)
+        now_kst = datetime.now(KST)
+        scheduled_at = now_kst.replace(
+            hour=hour,
+            minute=minute,
+            second=0,
+            microsecond=0,
+        )
+        # 슬롯 시간이 이미 지났으면 현재 시간으로 설정 (오늘 일정으로 표시)
+        if scheduled_at < now_kst:
+            scheduled_at = now_kst
 
-    authorization.firestore_create(
-        "schedules",
-        {
-            "uid": current_user["sub"],
-            "medicine_id": saved_id,
-            "medicine_name": request.medicineName,
-            "company": request.company,
-            "description": request.description,
-            "image_url": request.imageUrl,
-            "scheduled_at": scheduled_at.isoformat(),
-            "slot": request.slot,
-            "status": "pending",
-            "dose_count": request.doseCount,
-            "meal_relation": None,
-            "taken_at": None,
-            "created_at": now,
-            "updated_at": now,
-        },
-        uuid4().hex,
-    )
+        authorization.firestore_create(
+            "schedules",
+            {
+                "uid": current_user["sub"],
+                "medicine_id": saved_id,
+                "medicine_name": request.medicineName,
+                "company": request.company,
+                "description": request.description,
+                "image_url": request.imageUrl,
+                "scheduled_at": scheduled_at.isoformat(),
+                "slot": request.slot,
+                "status": "pending",
+                "dose_count": request.doseCount,
+                "meal_relation": None,
+                "taken_at": None,
+                "created_at": now,
+                "updated_at": now,
+            },
+            uuid4().hex,
+        )
 
     return {"status": "success", "data": _saved_payload(saved)}
 
