@@ -433,12 +433,12 @@ class _NotificationTestCardState extends State<_NotificationTestCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('5초 후 테스트 알림',
+                    const Text('5초 후 실제 복약 알림',
                         style: TextStyle(
                             fontWeight: FontWeight.w700,
                             color: AppColors.textPrimary)),
                     Text(
-                      _scheduled ? '✓ 예약됨 — 잠시 후 알림이 옵니다' : '버튼을 눌러 알림을 테스트하세요',
+                      _scheduled ? '✓ 예약됨 — 앱을 백그라운드로 내리세요' : '누를 때마다 다른 약으로 테스트',
                       style: TextStyle(
                         fontSize: 12,
                         color: _scheduled
@@ -477,14 +477,27 @@ class _NotificationTestCardState extends State<_NotificationTestCard> {
     );
   }
 
+  static const _testCases = [
+    (name: '크리페낙정', slot: ScheduleSlot.morning, dose: 1, meal: '식후 30분'),
+    (name: '텔미원정', slot: ScheduleSlot.morning, dose: 1, meal: '식전'),
+    (name: '오메프라졸캡슐', slot: ScheduleSlot.lunch, dose: 1, meal: '식후 30분'),
+    (name: '리바스타정', slot: ScheduleSlot.evening, dose: 1, meal: '식후'),
+    (name: '아스피린프로텍트정', slot: ScheduleSlot.bedtime, dose: 1, meal: '취침 전'),
+  ];
+
+  int _testIndex = 0;
+
   Future<void> _sendTest() async {
+    final tc = _testCases[_testIndex % _testCases.length];
+    _testIndex++;
+
     final testSchedule = Schedule(
       id: 'dev_test_${DateTime.now().millisecondsSinceEpoch}',
-      medicine: const Medicine(id: 'test', name: '테스트 약'),
+      medicine: Medicine(id: 'dev_${tc.name}', name: tc.name),
       scheduledAt: DateTime.now().add(const Duration(seconds: 5)),
-      slot: ScheduleSlot.morning,
-      doseCount: 1,
-      mealRelation: '식후',
+      slot: tc.slot,
+      doseCount: tc.dose,
+      mealRelation: tc.meal,
     );
 
     await NotificationService.scheduleOne(testSchedule);

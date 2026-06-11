@@ -414,28 +414,31 @@ def search_medicines(
                     break
         return {"status": "success", "data": data}
 
-    # medicines.csv 없으면 DUR 데이터에서 제품명 검색
+    # medicines.csv 없으면 DUR 데이터에서 제품명 검색 (A/B 양쪽 모두)
     dur = medi_calendar.dur_df
     if dur is None:
         return {"status": "success", "data": []}
 
-    mask = (
-        dur["제품명A"].str.startswith(keyword, na=False) |
-        dur["제품명A"].str.contains(f"\\({keyword}", na=False, regex=True)
-    )
-    matched = dur[mask][["제품명A", "업체명A"]].drop_duplicates("제품명A").head(limit)
+    mask_a = dur["제품명A"].str.contains(keyword, na=False, regex=False)
+    mask_b = dur["제품명B"].str.contains(keyword, na=False, regex=False)
+
+    names_a = dur[mask_a][["제품명A", "업체명A"]].rename(columns={"제품명A": "name", "업체명A": "company"})
+    names_b = dur[mask_b][["제품명B", "업체명B"]].rename(columns={"제품명B": "name", "업체명B": "company"})
+
+    import pandas as _pd
+    combined = _pd.concat([names_a, names_b]).drop_duplicates("name").head(limit)
 
     data = [
         {
             "id": f"dur_{i}",
-            "name": row["제품명A"],
-            "company": row.get("업체명A"),
+            "name": row["name"],
+            "company": row.get("company"),
             "imageUrl": None,
             "description": None,
             "cautions": None,
             "dosage": None,
         }
-        for i, row in matched.iterrows()
+        for i, row in combined.iterrows()
     ]
     return {"status": "success", "data": data}
 

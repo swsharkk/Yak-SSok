@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/constants.dart';
 import '../../models/chat_message.dart';
+import '../../services/backend_auth_service.dart';
 import '../chat_repository.dart';
 
 class BackendChatRepository implements ChatRepository {
@@ -38,12 +39,14 @@ class BackendChatRepository implements ChatRepository {
     ));
 
     try {
+      final uid = await BackendAuthService.uidOrFallback();
       final response = await _dio.post<Map<String, dynamic>>(
         '/chat',
         data: {
-          'uid': AppConstants.backendTestUid,
+          'uid': uid,
           'message': text,
         },
+        options: await BackendAuthService.authOptions(),
       );
       final reply = response.data?['reply'] as String?;
       if (reply == null || reply.isEmpty) return _fallbackReply(text);

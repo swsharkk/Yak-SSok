@@ -36,7 +36,7 @@ class MyInfoScreen extends ConsumerWidget {
           final guardianNumber =
               ref.watch(guardianControllerProvider).valueOrNull;
           
-          final currentUserUid = FirebaseAuth.instance.currentUser?.uid;
+          final currentUserUid = profile?.id;
           final verificationCode = (currentUserUid != null && currentUserUid.length >= 6)
               ? currentUserUid.substring(0, 6).toUpperCase()
               : 'YAK123';

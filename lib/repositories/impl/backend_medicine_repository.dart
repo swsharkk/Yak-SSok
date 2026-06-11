@@ -3,26 +3,33 @@ import 'package:dio/dio.dart';
 import '../../core/constants.dart';
 import '../../models/medicine.dart';
 import '../../services/backend_auth_service.dart';
+import '../../services/medicine_service.dart';
 import '../medicine_repository.dart';
 
 class BackendMedicineRepository implements MedicineRepository {
   BackendMedicineRepository({
     Dio? dio,
-  }) : _dio = dio ??
+    MedicineService? medicineService,
+  })  : _dio = dio ??
             Dio(
               BaseOptions(
                 baseUrl: AppConstants.apiBaseUrl,
                 connectTimeout: const Duration(seconds: 5),
                 receiveTimeout: const Duration(seconds: 15),
               ),
-            );
+            ),
+        _medicineService = medicineService ?? MedicineService();
 
   final Dio _dio;
+  final MedicineService _medicineService;
 
   @override
   Future<List<Medicine>> search(String query) async {
     final keyword = query.trim();
     if (keyword.isEmpty) return const [];
+
+    final publicMedicines = await _searchFromPublicApi(keyword);
+    if (publicMedicines.isNotEmpty) return publicMedicines;
 
     try {
       final response = await _dio.get<Map<String, dynamic>>(
@@ -33,13 +40,23 @@ class BackendMedicineRepository implements MedicineRepository {
         },
       );
       final data = response.data?['data'];
-      if (data is! List) return const [];
+      if (data is! List) return _searchFromPublicApi(keyword);
 
-      return data
+      final medicines = data
           .whereType<Map<String, dynamic>>()
           .map(_mapMedicine)
           .where((medicine) => medicine.name.isNotEmpty)
           .toList(growable: false);
+      return medicines;
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<List<Medicine>> _searchFromPublicApi(String keyword) async {
+    if (AppConstants.moefApiKey.isEmpty) return const [];
+    try {
+      return await _medicineService.searchByName(keyword);
     } catch (_) {
       return const [];
     }

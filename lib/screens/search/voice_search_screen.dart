@@ -15,19 +15,11 @@ class VoiceSearchScreen extends StatefulWidget {
 class _VoiceSearchScreenState extends State<VoiceSearchScreen>
     with TickerProviderStateMixin {
   final SpeechToText _speech = SpeechToText();
-  static const List<String> _dummyTranscriptWords = [
-    '타이레놀',
-    '먹는',
-    '방법',
-    '알려줘',
-  ];
 
   bool _isInitialized = false;
   bool _isListening = false;
   String _recognizedText = '';
   String _statusText = '마이크를 탭해서 시작하세요';
-  Timer? _dummyTranscriptTimer;
-  int _dummyWordIndex = 0;
 
   late AnimationController _pulseController;
   late AnimationController _waveController;
@@ -63,7 +55,9 @@ class _VoiceSearchScreenState extends State<VoiceSearchScreen>
     );
     setState(() {
       _isInitialized = available;
-      if (!available) _statusText = '마이크를 탭해서 더미 음성 인식을 시작하세요';
+      if (!available) {
+        _statusText = '마이크·음성 인식 권한이 필요해요. 설정에서 허용해주세요.';
+      }
     });
   }
 
@@ -81,50 +75,41 @@ class _VoiceSearchScreenState extends State<VoiceSearchScreen>
 
   Future<void> _toggleListening() async {
     if (_isListening) {
-      _dummyTranscriptTimer?.cancel();
-      if (_isInitialized) {
-        await _speech.stop();
-      }
+      await _speech.stop();
       setState(() => _isListening = false);
       _stopAnimations();
-    } else {
-      setState(() {
-        _recognizedText = '';
-        _statusText = '듣고 있어요...';
-        _isListening = true;
-      });
-      _startAnimations();
-      _startDummyTranscript();
+      return;
     }
-  }
 
-  void _startDummyTranscript() {
-    _dummyTranscriptTimer?.cancel();
-    _dummyWordIndex = 0;
-    _dummyTranscriptTimer = Timer.periodic(
-      const Duration(milliseconds: 520),
-      (timer) {
-        if (!mounted || !_isListening) {
-          timer.cancel();
-          return;
-        }
+    if (!_isInitialized) {
+      await _initSpeech();
+      if (!_isInitialized) return;
+    }
 
-        if (_dummyWordIndex >= _dummyTranscriptWords.length) {
-          timer.cancel();
-          setState(() {
-            _isListening = false;
-            _statusText = '인식된 내용을 확인해주세요';
-          });
-          _stopAnimations();
-          return;
-        }
+    setState(() {
+      _recognizedText = '';
+      _statusText = '듣고 있어요...';
+      _isListening = true;
+    });
+    _startAnimations();
 
+    await _speech.listen(
+      onResult: (result) {
+        if (!mounted) return;
         setState(() {
-          _recognizedText =
-              _dummyTranscriptWords.take(_dummyWordIndex + 1).join(' ');
+          _recognizedText = result.recognizedWords;
+          if (result.finalResult && _recognizedText.isNotEmpty) {
+            _statusText = '인식된 내용을 확인해주세요';
+          }
         });
-        _dummyWordIndex++;
       },
+      listenOptions: SpeechListenOptions(
+        localeId: 'ko_KR',
+        listenFor: const Duration(seconds: 30),
+        pauseFor: const Duration(seconds: 3),
+        partialResults: true,
+        cancelOnError: true,
+      ),
     );
   }
 
@@ -147,7 +132,6 @@ class _VoiceSearchScreenState extends State<VoiceSearchScreen>
 
   @override
   void dispose() {
-    _dummyTranscriptTimer?.cancel();
     _speech.cancel();
     _pulseController.dispose();
     _waveController.dispose();

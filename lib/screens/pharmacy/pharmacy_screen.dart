@@ -3,11 +3,15 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../models/pharmacy.dart';
+import '../../services/pharmacy_service.dart';
 
 class PharmacyScreen extends StatefulWidget {
   const PharmacyScreen({super.key});
@@ -17,15 +21,15 @@ class PharmacyScreen extends StatefulWidget {
 }
 
 class _PharmacyScreenState extends State<PharmacyScreen> {
+  final _pharmacyService = PharmacyService();
   NaverMapController? _mapController;
   Position? _currentPosition;
   double _compassHeading = 0;
   bool _locationLoading = true;
   String _locationLabel = '위치 확인 중...';
   StreamSubscription<MagnetometerEvent>? _magnetometerSub;
-  // 임시 약국 목록 (추후 API 연동)
-  List<_Pharmacy> _pharmacies = [];
-  _Pharmacy? _nearestPharmacy;
+  List<Pharmacy> _pharmacies = [];
+  Pharmacy? _nearestPharmacy;
 
   @override
   void initState() {
@@ -66,12 +70,11 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
         ),
       );
 
+      final region = await _regionKeyword(pos.latitude, pos.longitude);
+
       setState(() {
         _currentPosition = pos;
-        _locationLabel = '현재 위치 확인됨';
-        _locationLoading = false;
-        _pharmacies = _mockPharmacies(pos.latitude, pos.longitude);
-        _nearestPharmacy = _pharmacies.isNotEmpty ? _pharmacies.first : null;
+        _locationLabel = region != null ? '$region 기준' : '현재 위치 확인됨';
       });
 
       _mapController?.updateCamera(
@@ -81,18 +84,72 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
         ),
       );
 
-      _addMarkers();
+      await _loadPharmacies(pos.latitude, pos.longitude, regionKeyword: region);
     } catch (e) {
       _useDefaultLocation('위치를 가져올 수 없음 (서울 기준 표시)');
+    }
+  }
+
+  /// GPS 좌표를 "수원시 영통구" 같은 지역명으로 변환한다.
+  /// 네이버 지역검색이 좌표를 못 받기 때문에 검색어에 지역명을 넣기 위함.
+  Future<String?> _regionKeyword(double lat, double lng) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isEmpty) return null;
+      final p = placemarks.first;
+      final parts = <String>[
+        if ((p.locality ?? '').isNotEmpty) p.locality!,
+        if ((p.subLocality ?? '').isNotEmpty) p.subLocality!,
+      ];
+      if (parts.isEmpty && (p.administrativeArea ?? '').isNotEmpty) {
+        parts.add(p.administrativeArea!);
+      }
+      return parts.isEmpty ? null : parts.join(' ');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _loadPharmacies(
+    double latitude,
+    double longitude, {
+    String? regionKeyword,
+  }) async {
+    try {
+      final pharmacies = await _pharmacyService.searchNearby(
+        latitude: latitude,
+        longitude: longitude,
+        regionKeyword: regionKeyword,
+      );
+      if (!mounted) return;
+      setState(() {
+        _pharmacies = pharmacies;
+        _nearestPharmacy = pharmacies.isNotEmpty ? pharmacies.first : null;
+        _locationLoading = false;
+        if (pharmacies.isEmpty &&
+            (AppConstants.naverSearchClientId.isEmpty ||
+                AppConstants.naverSearchClientSecret.isEmpty)) {
+          _locationLabel = '네이버 지역 검색 API 키가 필요해요';
+        } else if (pharmacies.isEmpty) {
+          _locationLabel = '주변 약국을 찾지 못했어요';
+        }
+      });
+      _addMarkers();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _pharmacies = [];
+        _nearestPharmacy = null;
+        _locationLoading = false;
+        _locationLabel = '약국 정보를 불러오지 못했어요';
+      });
     }
   }
 
   void _useDefaultLocation(String label) {
     setState(() {
       _locationLabel = label;
-      _locationLoading = false;
-      _pharmacies = _mockPharmacies(_defaultLat, _defaultLng);
-      _nearestPharmacy = _pharmacies.isNotEmpty ? _pharmacies.first : null;
+      _currentPosition = null;
     });
     _mapController?.updateCamera(
       NCameraUpdate.withParams(
@@ -100,7 +157,7 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
         zoom: 15,
       ),
     );
-    _addMarkers();
+    _loadPharmacies(_defaultLat, _defaultLng, regionKeyword: '서울');
   }
 
   void _initCompass() {
@@ -118,7 +175,7 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
       controller.addOverlay(
         NMarker(
           id: p.name,
-          position: NLatLng(p.lat, p.lng),
+          position: NLatLng(p.latitude, p.longitude),
           caption: NOverlayCaption(text: p.name),
           iconTintColor: p == _nearestPharmacy
               ? AppColors.progressTeal
@@ -139,57 +196,38 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
     );
   }
 
-  List<_Pharmacy> _mockPharmacies(double lat, double lng) {
-    final mock = [
-      _Pharmacy(
-          name: '행복약국', lat: lat + 0.002, lng: lng + 0.001,
-          address: '서울시 강남구 테헤란로 1길', phone: '02-1234-5678'),
-      _Pharmacy(
-          name: '건강약국', lat: lat - 0.001, lng: lng + 0.002,
-          address: '서울시 강남구 테헤란로 2길', phone: '02-2345-6789'),
-      _Pharmacy(
-          name: '든든약국', lat: lat + 0.003, lng: lng - 0.001,
-          address: '서울시 강남구 테헤란로 3길', phone: '02-3456-7890'),
-    ];
-
-    mock.sort((a, b) => _distance(lat, lng, a.lat, a.lng)
-        .compareTo(_distance(lat, lng, b.lat, b.lng)));
-    return mock;
-  }
-
-  double _distance(double lat1, double lng1, double lat2, double lng2) {
-    return sqrt(pow(lat2 - lat1, 2) + pow(lng2 - lng1, 2));
-  }
-
-  double _bearingTo(_Pharmacy p) {
+  double _bearingTo(Pharmacy p) {
     if (_currentPosition == null) return 0;
-    final dLng = p.lng - _currentPosition!.longitude;
-    final dLat = p.lat - _currentPosition!.latitude;
+    final dLng = p.longitude - _currentPosition!.longitude;
+    final dLat = p.latitude - _currentPosition!.latitude;
     return atan2(dLng, dLat) * (180 / pi);
   }
 
-  String _distanceLabel(_Pharmacy p) {
-    if (_currentPosition == null) return '';
-    final meters = Geolocator.distanceBetween(
-      _currentPosition!.latitude,
-      _currentPosition!.longitude,
-      p.lat,
-      p.lng,
-    );
+  String _distanceLabel(Pharmacy p) {
+    final meters = p.distanceMeters ??
+        (_currentPosition == null
+            ? 0
+            : Geolocator.distanceBetween(
+                _currentPosition!.latitude,
+                _currentPosition!.longitude,
+                p.latitude,
+                p.longitude,
+              ));
+    if (meters <= 0) return '';
     return meters < 1000
         ? '${meters.toStringAsFixed(0)}m'
         : '${(meters / 1000).toStringAsFixed(1)}km';
   }
 
-  Future<void> _openNaverMaps(_Pharmacy p) async {
+  Future<void> _openNaverMaps(Pharmacy p) async {
     final uri = Uri.parse(
-      'nmap://route/walk?dlat=${p.lat}&dlng=${p.lng}&dname=${Uri.encodeComponent(p.name)}&appname=com.example.yakssok_front',
+      'nmap://route/walk?dlat=${p.latitude}&dlng=${p.longitude}&dname=${Uri.encodeComponent(p.name)}&appname=com.example.yakssok_front',
     );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else {
       final webUri = Uri.parse(
-        'https://map.naver.com/v5/directions/-/-/-/walk?c=${p.lng},${p.lat},15,0,0,0,dh',
+        'https://map.naver.com/v5/directions/-/-/-/walk?c=${p.longitude},${p.latitude},15,0,0,0,dh',
       );
       await launchUrl(webUri, mode: LaunchMode.externalApplication);
     }
@@ -307,8 +345,8 @@ class _MapSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final initial = currentPosition != null
         ? NCameraPosition(
-            target: NLatLng(
-                currentPosition!.latitude, currentPosition!.longitude),
+            target:
+                NLatLng(currentPosition!.latitude, currentPosition!.longitude),
             zoom: 15,
           )
         : const NCameraPosition(
@@ -339,7 +377,7 @@ class _CompassSection extends StatelessWidget {
     required this.onNavigate,
   });
 
-  final _Pharmacy pharmacy;
+  final Pharmacy pharmacy;
   final double compassHeading;
   final double bearing;
   final String distance;
@@ -430,10 +468,10 @@ class _PharmacyList extends StatelessWidget {
     required this.onNavigate,
   });
 
-  final List<_Pharmacy> pharmacies;
-  final _Pharmacy? nearest;
-  final String Function(_Pharmacy) distanceLabel;
-  final void Function(_Pharmacy) onNavigate;
+  final List<Pharmacy> pharmacies;
+  final Pharmacy? nearest;
+  final String Function(Pharmacy) distanceLabel;
+  final void Function(Pharmacy) onNavigate;
 
   @override
   Widget build(BuildContext context) {
@@ -491,7 +529,7 @@ class _PharmacyCard extends StatelessWidget {
     required this.onNavigate,
   });
 
-  final _Pharmacy pharmacy;
+  final Pharmacy pharmacy;
   final bool isNearest;
   final String distance;
   final VoidCallback onNavigate;
@@ -520,9 +558,8 @@ class _PharmacyCard extends StatelessWidget {
             ),
             child: Icon(
               Icons.local_pharmacy_rounded,
-              color: isNearest
-                  ? AppColors.progressTeal
-                  : AppColors.textSecondary,
+              color:
+                  isNearest ? AppColors.progressTeal : AppColors.textSecondary,
               size: 22,
             ),
           ),
@@ -547,8 +584,8 @@ class _PharmacyCard extends StatelessWidget {
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: AppColors.progressTeal,
-                          borderRadius: BorderRadius.circular(
-                              AppDimensions.radiusPill),
+                          borderRadius:
+                              BorderRadius.circular(AppDimensions.radiusPill),
                         ),
                         child: const Text(
                           '가장 가까움',
@@ -563,7 +600,7 @@ class _PharmacyCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  pharmacy.address,
+                  pharmacy.address ?? '주소 정보 없음',
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
@@ -595,21 +632,4 @@ class _PharmacyCard extends StatelessWidget {
       ),
     );
   }
-}
-
-// ─── 데이터 모델 ──────────────────────────────────────────
-class _Pharmacy {
-  const _Pharmacy({
-    required this.name,
-    required this.lat,
-    required this.lng,
-    required this.address,
-    required this.phone,
-  });
-
-  final String name;
-  final double lat;
-  final double lng;
-  final String address;
-  final String phone;
 }

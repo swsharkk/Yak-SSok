@@ -15,6 +15,9 @@ import 'camera_screen.dart';
 import 'chatbot_screen.dart';
 import 'voice_search_screen.dart';
 
+/// 음성 검색 결과를 텍스트 검색창으로 전달하는 브리지.
+final voiceSearchQueryProvider = StateProvider<String?>((ref) => null);
+
 /// 검색 탭 — 음성/카메라/챗봇 진입과 최근 검색 목록.
 class SearchScreen extends StatelessWidget {
   const SearchScreen({super.key});
@@ -130,6 +133,16 @@ class _TextSearchSectionState extends ConsumerState<_TextSearchSection> {
   Widget build(BuildContext context) {
     final searchState = ref.watch(medicineSearchProvider);
     final query = _controller.text.trim();
+
+    // 음성 검색 결과가 들어오면 검색창에 채우고 바로 검색한다.
+    ref.listen(voiceSearchQueryProvider, (previous, next) {
+      if (next == null || next.isEmpty) return;
+      _controller.text = next;
+      _debounce?.cancel();
+      ref.read(medicineSearchProvider.notifier).search(next);
+      ref.read(voiceSearchQueryProvider.notifier).state = null;
+      setState(() {});
+    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -367,11 +380,11 @@ class _SearchHeader extends StatelessWidget {
   }
 }
 
-class _SearchMethodGrid extends StatelessWidget {
+class _SearchMethodGrid extends ConsumerWidget {
   const _SearchMethodGrid();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       children: [
         IntrinsicHeight(
@@ -386,12 +399,17 @@ class _SearchMethodGrid extends StatelessWidget {
                   icon: Icons.mic_rounded,
                   title: '음성 검색',
                   description: '말씀만 하시면\n찾아드려요',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const VoiceSearchScreen(),
-                    ),
-                  ),
+                  onTap: () async {
+                    final text = await Navigator.push<String>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const VoiceSearchScreen(),
+                      ),
+                    );
+                    if (text == null || text.trim().isEmpty) return;
+                    ref.read(voiceSearchQueryProvider.notifier).state =
+                        text.trim();
+                  },
                 ),
               ),
               const SizedBox(width: AppDimensions.paddingMd),

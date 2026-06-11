@@ -50,23 +50,75 @@ class WarningScreen extends StatelessWidget {
                       _InteractionCard(interaction: interactions[i]),
                 ),
               ),
+              const SizedBox(height: AppDimensions.paddingLg),
+              Container(
+                padding: const EdgeInsets.all(AppDimensions.paddingLg),
+                decoration: BoxDecoration(
+                  color: AppColors.alertPrimary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusLg),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.local_hospital_rounded,
+                        color: AppColors.alertPrimary, size: 20),
+                    const SizedBox(width: AppDimensions.paddingSm),
+                    Expanded(
+                      child: Text(
+                        '반드시 전문가(의사·약사)와\n상담 후 복용 여부를 결정하세요.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.alertPrimary,
+                              fontWeight: FontWeight.w600,
+                              height: 1.5,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: AppDimensions.paddingXl),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.alertPrimary,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(54),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppDimensions.radiusMd),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textSecondary,
+                        minimumSize: const Size.fromHeight(54),
+                        side: const BorderSide(color: AppColors.divider),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppDimensions.radiusMd),
+                        ),
+                      ),
+                      child: const Text(
+                        '취소',
+                        style:
+                            TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
+                    ),
                   ),
-                ),
-                child: const Text(
-                  '확인했어요',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
+                  const SizedBox(width: AppDimensions.paddingMd),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.alertPrimary,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(54),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppDimensions.radiusMd),
+                        ),
+                      ),
+                      child: const Text(
+                        '그래도 추가',
+                        style:
+                            TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

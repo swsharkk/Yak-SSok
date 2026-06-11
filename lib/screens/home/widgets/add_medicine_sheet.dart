@@ -112,10 +112,23 @@ class _AddMedicineSheetState extends ConsumerState<AddMedicineSheet> {
   Future<void> _onAdd() async {
     if (_selectedMedicine == null || _selectedSlots.isEmpty) return;
     try {
-      final existing =
-          await ref.read(savedMedicineControllerProvider.future);
-      final existingNames = existing.map((m) => m.medicineName).toList();
+      // 1. 저장 전 병용금기 체크
+      final interactions = await ref
+          .read(interactionRepositoryProvider)
+          .checkInteractions([_selectedMedicine!.name]);
 
+      // 2. 경고가 있으면 사용자 확인 요청
+      if (interactions.isNotEmpty && mounted) {
+        final proceed = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => WarningScreen(interactions: interactions),
+          ),
+        );
+        if (proceed != true) return; // 취소 선택 시 저장 안 함
+      }
+
+      // 3. 확인 후 저장
       for (final slot in _selectedSlots) {
         await ref.read(savedMedicineControllerProvider.notifier).add(
               medicineName: _selectedMedicine!.name,
@@ -138,24 +151,9 @@ class _AddMedicineSheetState extends ConsumerState<AddMedicineSheet> {
             );
       }
 
-      final interactions = await ref
-          .read(interactionRepositoryProvider)
-          .checkInteractions([_selectedMedicine!.name, ...existingNames]);
-
-      // 홈 화면 오늘의 약 목록 즉시 갱신
       ref.invalidate(todaySchedulesProvider);
-
       if (!mounted) return;
       Navigator.pop(context);
-
-      if (interactions.isNotEmpty) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => WarningScreen(interactions: interactions),
-          ),
-        );
-      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
